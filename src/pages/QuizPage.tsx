@@ -80,60 +80,49 @@ const QuizPage: React.FC = () => {
       setSelectedOption(null);
       setIsAnswered(false);
     } else {
-      // Calculate final score
-      const finalScore = Math.round((score / questions.length) * 100);
-      
-      // Complete the quiz
-      completeQuiz(selectedQuiz.id, finalScore, earnedXp);
-      
-      // Award XP
-      gainXP(earnedXp);
-      
-      // Show results
       setShowResults(true);
     }
+  };
+
+  // When user chooses to finish, then call completeQuiz and gainXP
+  const handleFinishQuiz = () => {
+    const finalScore = Math.round((score / questions.length) * 100);
+    completeQuiz(selectedQuiz.id, finalScore, earnedXp);
+    gainXP(earnedXp);
+    setSelectedQuiz(null);
+    setTimeout(() => navigate('/dashboard'), 10); // Use setTimeout to ensure state is updated before navigating
   };
   
   if (showResults) {
     return (
       <div className="min-h-screen bg-gray-100">
         <Header />
-        
         <main className="container mx-auto px-4 py-8">
           <Card className="max-w-2xl mx-auto">
             <CardHeader className="text-center border-b">
               <h1 className="text-2xl font-bold text-gray-900">Quiz Complete!</h1>
             </CardHeader>
-            
             <CardContent className="py-8">
               <div className="flex flex-col items-center justify-center">
                 <div className="bg-blue-100 p-6 rounded-full mb-6">
                   <Award className="h-16 w-16 text-blue-600" />
                 </div>
-                
                 <h2 className="text-xl font-semibold mb-2">
                   Your Score: {Math.round((score / questions.length) * 100)}%
                 </h2>
-                
                 <p className="text-gray-600 mb-6">
                   You answered {score} out of {questions.length} questions correctly
                 </p>
-                
                 <div className="bg-green-100 text-green-800 rounded-full px-4 py-2 mb-8">
                   <span className="font-semibold">+{earnedXp} XP</span> earned!
                 </div>
-                
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-md">
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      setSelectedQuiz(null);
-                      navigate('/categories');
-                    }}
+                    onClick={handleFinishQuiz}
                   >
-                    Back to Categories
+                    Return to Dashboard
                   </Button>
-                  
                   <Button
                     onClick={() => {
                       setCurrentQuestionIndex(0);
