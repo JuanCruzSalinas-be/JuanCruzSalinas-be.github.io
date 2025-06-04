@@ -1,3 +1,60 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  font-size: 16px;
+}
+
+body {
+  @apply text-lg leading-relaxed;
+}
+
+/* High contrast focus indicators */
+*:focus {
+  @apply outline-none ring-4 ring-primary-500 ring-offset-2;
+}
+
+/* Larger touch targets */
+button, 
+a {
+  @apply min-h-[44px] min-w-[44px];
+}
+
+/* Improved readability */
+h1 {
+  @apply text-4xl font-bold leading-tight;
+}
+
+h2 {
+  @apply text-3xl font-bold leading-tight;
+}
+
+h3 {
+  @apply text-2xl font-bold leading-tight;
+}
+
+/* Better spacing for readability */
+p {
+  @apply mb-6;
+}
+
+/* High contrast text */
+.text-body {
+  @apply text-gray-900;
+}
+
+/* Larger icons */
+.icon {
+  @apply w-8 h-8;
+}
+
+/* Improved form elements */
+select {
+  @apply text-xl py-4 px-4 rounded-xl border-2 border-gray-300;
+}
+
+/* Better spacing between elements */
+.content-spacing > * + * {
+  @apply mt-8;
+}
