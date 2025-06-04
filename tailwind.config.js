@@ -26,6 +26,9 @@ export default {
           900: '#0c4a6e',
         },
       },
+      ringColor: {
+        primary: ({ theme }) => theme('colors.primary'),
+      },
     },
   },
   plugins: [],
