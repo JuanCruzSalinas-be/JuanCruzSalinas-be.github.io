@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
-import { Brain } from 'lucide-react';
+import { Brain, Settings } from 'lucide-react';
 
 const Header: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -23,6 +23,14 @@ const Header: React.FC = () => {
           {isAuthenticated ? (
             <div className="flex items-center space-x-4">
               <span className="text-gray-700">Hello, {user?.name}</span>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/survey')}
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                Personalize
+              </Button>
               <Button 
                 variant="outline" 
                 size="sm" 

@@ -6,7 +6,8 @@ import Header from '../components/layout/Header';
 import LevelProgress from '../components/quiz/LevelProgress';
 import DailyQuestCard from '../components/quiz/DailyQuestCard';
 import Card, { CardContent, CardHeader } from '../components/ui/Card';
-import { Trophy } from 'lucide-react';
+import { Trophy, Settings } from 'lucide-react';
+import Button from '../components/ui/Button';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -30,6 +31,14 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-600 mt-2">
             Choose a quiz category to begin your memory journey.
           </p>
+          <Button 
+            variant="outline"
+            className="mt-4"
+            onClick={() => navigate('/survey')}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Personalize Your Experience
+          </Button>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
