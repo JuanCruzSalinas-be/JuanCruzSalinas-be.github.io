@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { User } from '../types';
+import { User, PersonalInfo } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -8,6 +8,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  updatePersonalInfo: (info: PersonalInfo) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -16,7 +17,8 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: () => {},
-  loading: true
+  loading: true,
+  updatePersonalInfo: () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -35,7 +37,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, password: string) => {
-    // In a real app, this would call an API
     // For demo, we'll create a mock user
     const mockUser: User = {
       id: '1',
@@ -50,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const register = async (name: string, email: string, password: string) => {
-    // In a real app, this would call an API
     // For demo, we'll create a mock user
     const mockUser: User = {
       id: '1',
@@ -62,6 +62,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setUser(mockUser);
     localStorage.setItem('memoryLaneUser', JSON.stringify(mockUser));
+  };
+
+  const updatePersonalInfo = (info: PersonalInfo) => {
+    if (user) {
+      const updatedUser = {
+        ...user,
+        personalInfo: info
+      };
+      setUser(updatedUser);
+      localStorage.setItem('memoryLaneUser', JSON.stringify(updatedUser));
+    }
   };
 
   const logout = () => {
@@ -76,7 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login, 
       register, 
       logout,
-      loading
+      loading,
+      updatePersonalInfo
     }}>
       {children}
     </AuthContext.Provider>

@@ -9,15 +9,21 @@ import { PersonalInfo, FamilyMember, ImportantDate } from '../types';
 
 const Survey: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, updatePersonalInfo } = useAuth();
   
-  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
-    age: 0,
-    interests: [],
-    familyMembers: [],
-    dailyRoutine: [],
-    importantDates: [],
-    favoriteLocations: []
+  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>(() => {
+    // Initialize with existing data if available
+    if (user?.personalInfo) {
+      return user.personalInfo;
+    }
+    return {
+      age: 0,
+      interests: [],
+      familyMembers: [],
+      dailyRoutine: [],
+      importantDates: [],
+      favoriteLocations: []
+    };
   });
   
   const [newInterest, setNewInterest] = useState('');
@@ -28,8 +34,7 @@ const Survey: React.FC = () => {
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would be saved to a database
-    localStorage.setItem(`${user?.id}_personalInfo`, JSON.stringify(personalInfo));
+    updatePersonalInfo(personalInfo);
     navigate('/dashboard');
   };
   
@@ -86,9 +91,19 @@ const Survey: React.FC = () => {
                   {personalInfo.interests.map((interest, index) => (
                     <span
                       key={index}
-                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
+                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center"
                     >
                       {interest}
+                      <button
+                        type="button"
+                        className="ml-2 text-blue-600 hover:text-blue-800"
+                        onClick={() => setPersonalInfo({
+                          ...personalInfo,
+                          interests: personalInfo.interests.filter((_, i) => i !== index)
+                        })}
+                      >
+                        ×
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -137,6 +152,16 @@ const Survey: React.FC = () => {
                       className="bg-gray-50 p-2 rounded-md flex justify-between items-center"
                     >
                       <span>{member.name} - {member.relation}</span>
+                      <button
+                        type="button"
+                        className="text-red-600 hover:text-red-800"
+                        onClick={() => setPersonalInfo({
+                          ...personalInfo,
+                          familyMembers: personalInfo.familyMembers.filter((_, i) => i !== index)
+                        })}
+                      >
+                        Remove
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -171,9 +196,19 @@ const Survey: React.FC = () => {
                   {personalInfo.dailyRoutine.map((routine, index) => (
                     <div
                       key={index}
-                      className="bg-gray-50 p-2 rounded-md"
+                      className="bg-gray-50 p-2 rounded-md flex justify-between items-center"
                     >
                       {routine}
+                      <button
+                        type="button"
+                        className="text-red-600 hover:text-red-800"
+                        onClick={() => setPersonalInfo({
+                          ...personalInfo,
+                          dailyRoutine: personalInfo.dailyRoutine.filter((_, i) => i !== index)
+                        })}
+                      >
+                        Remove
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -235,7 +270,19 @@ const Survey: React.FC = () => {
                       className="bg-gray-50 p-2 rounded-md flex justify-between items-center"
                     >
                       <span>{date.description} - {date.date}</span>
-                      <span className="text-sm text-gray-500">{date.type}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">{date.type}</span>
+                        <button
+                          type="button"
+                          className="text-red-600 hover:text-red-800"
+                          onClick={() => setPersonalInfo({
+                            ...personalInfo,
+                            importantDates: personalInfo.importantDates.filter((_, i) => i !== index)
+                          })}
+                        >
+                          Remove
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -270,9 +317,19 @@ const Survey: React.FC = () => {
                   {personalInfo.favoriteLocations.map((location, index) => (
                     <span
                       key={index}
-                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
+                      className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center"
                     >
                       {location}
+                      <button
+                        type="button"
+                        className="ml-2 text-blue-600 hover:text-blue-800"
+                        onClick={() => setPersonalInfo({
+                          ...personalInfo,
+                          favoriteLocations: personalInfo.favoriteLocations.filter((_, i) => i !== index)
+                        })}
+                      >
+                        ×
+                      </button>
                     </span>
                   ))}
                 </div>
