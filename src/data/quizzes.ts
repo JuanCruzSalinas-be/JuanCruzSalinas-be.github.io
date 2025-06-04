@@ -11,80 +11,44 @@ const shuffleArray = <T>(array: T[]): T[] => {
   return shuffled;
 };
 
-// Generate questions based on personal info
-const generatePersonalizedQuestions = (category: string, difficulty: 'easy' | 'medium' | 'hard', personalInfo?: PersonalInfo): Question[] => {
-  const questions: Question[] = [];
-  const xpRewards = { easy: 10, medium: 20, hard: 30 };
-  
-  if (personalInfo) {
-    switch(category) {
-      case 'dailyTasks':
-        questions.push(
-          ...personalInfo.dailyRoutine.map((routine, index) => ({
-            id: `personal-daily-${index}`,
-            text: `What is your usual ${routine.toLowerCase()}?`,
-            options: shuffleArray([routine, ...personalInfo.dailyRoutine.filter(r => r !== routine).slice(0, 3)]),
-            correctAnswer: routine,
-            difficulty,
-            xpReward: xpRewards[difficulty]
-          }))
-        );
-        break;
-        
-      case 'familyRecognition':
-        questions.push(
-          ...personalInfo.familyMembers.map((member, index) => ({
-            id: `personal-family-${index}`,
-            text: `Who is ${member.name} to you?`,
-            options: shuffleArray([member.relation, ...personalInfo.familyMembers.filter(m => m.relation !== member.relation).map(m => m.relation).slice(0, 3)]),
-            correctAnswer: member.relation,
-            difficulty,
-            xpReward: xpRewards[difficulty]
-          }))
-        );
-        break;
-        
-      case 'importantDates':
-        questions.push(
-          ...personalInfo.importantDates.map((date, index) => ({
-            id: `personal-date-${index}`,
-            text: `What happens on ${date.date}?`,
-            options: shuffleArray([date.description, ...personalInfo.importantDates.filter(d => d.description !== date.description).map(d => d.description).slice(0, 3)]),
-            correctAnswer: date.description,
-            difficulty,
-            xpReward: xpRewards[difficulty]
-          }))
-        );
-        break;
-        
-      case 'placesRecognition':
-        questions.push(
-          ...personalInfo.favoriteLocations.map((location, index) => ({
-            id: `personal-place-${index}`,
-            text: `Which of these places is important to you?`,
-            options: shuffleArray([location, ...personalInfo.favoriteLocations.filter(l => l !== location).slice(0, 3)]),
-            correctAnswer: location,
-            difficulty,
-            xpReward: xpRewards[difficulty]
-          }))
-        );
-        break;
+// Generate questions using AI
+const generatePersonalizedQuestions = async (
+  category: string,
+  difficulty: 'easy' | 'medium' | 'hard',
+  personalInfo?: PersonalInfo
+): Promise<Question[]> => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-questions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        category,
+        difficulty,
+        personalInfo
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate questions');
     }
-  }
-  
-  // Fill remaining questions with default ones if needed
-  while (questions.length < 10) {
-    questions.push({
-      id: `default-${questions.length}`,
-      text: `Default Question ${questions.length + 1}`,
-      options: [`Option A`, `Option B`, `Option C`, `Option D`],
+
+    const questions = await response.json();
+    return shuffleArray(questions);
+  } catch (error) {
+    console.error('Error generating questions:', error);
+    // Return default questions if AI generation fails
+    return Array(10).fill(null).map((_, index) => ({
+      id: `${category}-${index}`,
+      text: `Default Question ${index + 1}`,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
       correctAnswer: 'Option A',
       difficulty,
-      xpReward: xpRewards[difficulty]
-    });
+      xpReward: { easy: 10, medium: 20, hard: 30 }[difficulty]
+    }));
   }
-  
-  return shuffleArray(questions).slice(0, 10);
 };
 
 // Categories with quizzes
