@@ -9,6 +9,7 @@ import Register from './pages/Register';
 import Categories from './pages/Categories';
 import CategoryDetail from './pages/CategoryDetail';
 import QuizPage from './pages/QuizPage';
+import Survey from './pages/Survey';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -31,6 +32,7 @@ function App() {
               <Route path="/" element={<Navigate to="/dashboard" />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/survey" element={<Survey />} />
               
               <Route 
                 path="/dashboard" 

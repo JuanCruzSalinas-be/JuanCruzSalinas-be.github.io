@@ -4,6 +4,28 @@ export interface User {
   level: number;
   xp: number;
   xpToNextLevel: number;
+  personalInfo?: PersonalInfo;
+}
+
+export interface PersonalInfo {
+  age: number;
+  interests: string[];
+  familyMembers: FamilyMember[];
+  dailyRoutine: string[];
+  importantDates: ImportantDate[];
+  favoriteLocations: string[];
+}
+
+export interface FamilyMember {
+  name: string;
+  relation: string;
+  birthDate?: string;
+}
+
+export interface ImportantDate {
+  date: string;
+  description: string;
+  type: 'birthday' | 'anniversary' | 'holiday' | 'other';
 }
 
 export interface Question {

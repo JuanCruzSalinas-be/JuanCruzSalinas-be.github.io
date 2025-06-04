@@ -34,7 +34,7 @@ const Register: React.FC = () => {
       setError('');
       setLoading(true);
       await register(name, email, password);
-      navigate('/dashboard');
+      navigate('/survey'); // Redirect to survey after registration
     } catch (err) {
       setError('Failed to create an account');
       console.error(err);
@@ -111,7 +111,7 @@ const Register: React.FC = () => {
           <div className="text-center mt-6">
             <p className="text-gray-600">
               Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 hover:underline">
+              <Link to="/login" className="text-blue-600 hover: underline">
                 Sign in
               </Link>
             </p>
