@@ -164,6 +164,4 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </QuizContext.Provider>
   );
-};
-
-export { QuizProvider }
+}
