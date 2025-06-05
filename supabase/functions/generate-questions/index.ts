@@ -7,16 +7,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
+interface FamilyMember {
+  name: string;
+  relation: string;
+  birthDate?: string;
+}
+
+interface ImportantDate {
+  date: string;
+  description: string;
+  type: 'birthday' | 'anniversary' | 'holiday' | 'other';
+}
+
+interface PersonalInfo {
+  age: number;
+  interests: string[];
+  familyMembers: FamilyMember[];
+  dailyRoutine: string[];
+  importantDates: ImportantDate[];
+  favoriteLocations: string[];
+}
+
 interface RequestBody {
   category: string;
   difficulty: 'easy' | 'medium' | 'hard';
-  personalInfo?: {
-    name?: string;
-    age?: number;
-    familyMembers?: string[];
-    importantDates?: { event: string; date: string }[];
-    importantPlaces?: string[];
-  };
+  personalInfo?: PersonalInfo;
 }
 
 interface Question {
