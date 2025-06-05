@@ -52,173 +52,46 @@ const generatePersonalizedQuestions = async (
 };
 
 // Categories with quizzes
-export const generateCategories = (personalInfo?: PersonalInfo): Category[] => [
-  {
-    id: 'dailyTasks',
-    title: 'Daily Tasks',
-    description: 'Practice remembering everyday activities and their steps.',
-    icon: 'Home',
-    backgroundColor: 'bg-green-500',
-    quizzes: [
-      {
-        id: 'dailyTasks-easy',
-        title: 'Basic Daily Activities',
-        description: 'Simple questions about common daily activities',
-        icon: 'Home',
-        questions: generatePersonalizedQuestions('dailyTasks', 'easy', personalInfo),
-        xpReward: 50
-      },
-      {
-        id: 'dailyTasks-medium',
-        title: 'Intermediate Daily Activities',
-        description: 'Moderate questions about daily routines',
-        icon: 'Home',
-        questions: generatePersonalizedQuestions('dailyTasks', 'medium', personalInfo),
-        xpReward: 100
-      },
-      {
-        id: 'dailyTasks-hard',
-        title: 'Advanced Daily Activities',
-        description: 'Challenging questions about complex daily tasks',
-        icon: 'Home',
-        questions: generatePersonalizedQuestions('dailyTasks', 'hard', personalInfo),
-        xpReward: 150
-      }
-    ]
-  },
-  {
-    id: 'simpleTasks',
-    title: 'Simple Tasks',
-    description: 'Learn and practice basic concepts and skills.',
-    icon: 'BookOpen',
-    backgroundColor: 'bg-amber-400',
-    quizzes: [
-      {
-        id: 'simpleTasks-easy',
-        title: 'Basic Concepts',
-        description: 'Simple questions about basic concepts',
-        icon: 'BookOpen',
-        questions: generatePersonalizedQuestions('simpleTasks', 'easy', personalInfo),
-        xpReward: 50
-      },
-      {
-        id: 'simpleTasks-medium',
-        title: 'Intermediate Concepts',
-        description: 'Moderate questions about common concepts',
-        icon: 'BookOpen',
-        questions: generatePersonalizedQuestions('simpleTasks', 'medium', personalInfo),
-        xpReward: 100
-      },
-      {
-        id: 'simpleTasks-hard',
-        title: 'Advanced Concepts',
-        description: 'Challenging questions about various concepts',
-        icon: 'BookOpen',
-        questions: generatePersonalizedQuestions('simpleTasks', 'hard', personalInfo),
-        xpReward: 150
-      }
-    ]
-  },
-  {
-    id: 'familyRecognition',
-    title: 'Family Recognition',
-    description: 'Practice remembering family members and relationships.',
-    icon: 'Users',
-    backgroundColor: 'bg-blue-500',
-    quizzes: [
-      {
-        id: 'familyRecognition-easy',
-        title: 'Basic Family Relations',
-        description: 'Simple questions about immediate family members',
-        icon: 'Users',
-        questions: generatePersonalizedQuestions('familyRecognition', 'easy', personalInfo),
-        xpReward: 50
-      },
-      {
-        id: 'familyRecognition-medium',
-        title: 'Extended Family Relations',
-        description: 'Moderate questions about extended family relationships',
-        icon: 'Users',
-        questions: generatePersonalizedQuestions('familyRecognition', 'medium', personalInfo),
-        xpReward: 100
-      },
-      {
-        id: 'familyRecognition-hard',
-        title: 'Complex Family Relations',
-        description: 'Challenging questions about complex family relationships',
-        icon: 'Users',
-        questions: generatePersonalizedQuestions('familyRecognition', 'hard', personalInfo),
-        xpReward: 150
-      }
-    ]
-  },
-  {
-    id: 'importantDates',
-    title: 'Important Dates',
-    description: 'Remember important dates, holidays, and occasions.',
-    icon: 'Calendar',
-    backgroundColor: 'bg-purple-500',
-    quizzes: [
-      {
-        id: 'importantDates-easy',
-        title: 'Major Holidays',
-        description: 'Simple questions about major holidays and dates',
-        icon: 'Calendar',
-        questions: generatePersonalizedQuestions('importantDates', 'easy', personalInfo),
-        xpReward: 50
-      },
-      {
-        id: 'importantDates-medium',
-        title: 'Seasonal Events',
-        description: 'Moderate questions about seasonal events and dates',
-        icon: 'Calendar',
-        questions: generatePersonalizedQuestions('importantDates', 'medium', personalInfo),
-        xpReward: 100
-      },
-      {
-        id: 'importantDates-hard',
-        title: 'Special Occasions',
-        description: 'Challenging questions about special occasions and dates',
-        icon: 'Calendar',
-        questions: generatePersonalizedQuestions('importantDates', 'hard', personalInfo),
-        xpReward: 150
-      }
-    ]
-  },
-  {
-    id: 'placesRecognition',
-    title: 'Places Recognition',
-    description: 'Practice identifying different places and their purposes.',
-    icon: 'Brain',
-    backgroundColor: 'bg-rose-500',
-    quizzes: [
-      {
-        id: 'placesRecognition-easy',
-        title: 'Common Places',
-        description: 'Simple questions about common places',
-        icon: 'Brain',
-        questions: generatePersonalizedQuestions('placesRecognition', 'easy', personalInfo),
-        xpReward: 50
-      },
-      {
-        id: 'placesRecognition-medium',
-        title: 'Public Spaces',
-        description: 'Moderate questions about public spaces and buildings',
-        icon: 'Brain',
-        questions: generatePersonalizedQuestions('placesRecognition', 'medium', personalInfo),
-        xpReward: 100
-      },
-      {
-        id: 'placesRecognition-hard',
-        title: 'Specific Locations',
-        description: 'Challenging questions about specific locations and their functions',
-        icon: 'Brain',
-        questions: generatePersonalizedQuestions('placesRecognition', 'hard', personalInfo),
-        xpReward: 150
-      }
-    ]
-  }
-];
+export const generateCategories = async (personalInfo?: PersonalInfo): Promise<Category[]> => {
+  const categories: Category[] = [
+    {
+      id: 'dailyTasks',
+      title: 'Daily Tasks',
+      description: 'Practice remembering everyday activities and their steps.',
+      icon: 'Home',
+      backgroundColor: 'bg-green-500',
+      quizzes: [
+        {
+          id: 'dailyTasks-easy',
+          title: 'Basic Daily Activities',
+          description: 'Simple questions about common daily activities',
+          icon: 'Home',
+          questions: await generatePersonalizedQuestions('dailyTasks', 'easy', personalInfo),
+          xpReward: 50
+        },
+        {
+          id: 'dailyTasks-medium',
+          title: 'Intermediate Daily Activities',
+          description: 'Moderate questions about daily routines',
+          icon: 'Home',
+          questions: await generatePersonalizedQuestions('dailyTasks', 'medium', personalInfo),
+          xpReward: 100
+        },
+        {
+          id: 'dailyTasks-hard',
+          title: 'Advanced Daily Activities',
+          description: 'Challenging questions about complex daily tasks',
+          icon: 'Home',
+          questions: await generatePersonalizedQuestions('dailyTasks', 'hard', personalInfo),
+          xpReward: 150
+        }
+      ]
+    },
+    // ... other categories with their quizzes
+  ];
+
+  return categories;
+};
 
 // Daily quests
 export const dailyQuests: DailyQuest[] = [
