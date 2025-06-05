@@ -43,6 +43,35 @@ interface Question {
   xpReward: number;
 }
 
+// Helper function to delay execution
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Retry function with exponential backoff
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      if (error instanceof Error && error.message.includes('429')) {
+        // If rate limited, wait with exponential backoff
+        const waitTime = baseDelay * Math.pow(2, i);
+        await delay(waitTime);
+        continue;
+      }
+      throw error;
+    }
+  }
+  
+  throw lastError;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -55,7 +84,6 @@ Deno.serve(async (req) => {
   try {
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) {
-      // Return empty array if API key is not configured
       return new Response(JSON.stringify([]), {
         headers: {
           ...corsHeaders,
@@ -83,24 +111,27 @@ Deno.serve(async (req) => {
     
     Return an array of these question objects.`;
 
-    // Generate questions using OpenAI
-    const completion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that generates quiz questions. Always return valid JSON.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+    // Generate questions using OpenAI with retry logic
+    const completion = await retryWithBackoff(async () => {
+      return await openai.createChatCompletion({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "You are a helpful assistant that generates quiz questions. Always return valid JSON.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      });
     });
 
     const content = completion.data.choices[0].message?.content;
     if (!content) {
-      // Return empty array if no content received
       return new Response(JSON.stringify([]), {
         headers: {
           ...corsHeaders,
@@ -117,7 +148,6 @@ Deno.serve(async (req) => {
       }
     } catch (error) {
       console.error("Failed to parse OpenAI response:", error);
-      // Return empty array on parsing error
       return new Response(JSON.stringify([]), {
         headers: {
           ...corsHeaders,
@@ -144,7 +174,6 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Error generating questions:", error);
-    // Return empty array instead of error status
     return new Response(JSON.stringify([]), {
       headers: {
         ...corsHeaders,
