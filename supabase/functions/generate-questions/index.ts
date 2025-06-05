@@ -55,7 +55,13 @@ Deno.serve(async (req) => {
   try {
     const apiKey = Deno.env.get("OPENAI_API_KEY");
     if (!apiKey) {
-      throw new Error("OpenAI API key is not configured");
+      // Return empty array if API key is not configured
+      return new Response(JSON.stringify([]), {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
     const { category, difficulty, personalInfo } = await req.json() as RequestBody;
@@ -94,7 +100,13 @@ Deno.serve(async (req) => {
 
     const content = completion.data.choices[0].message?.content;
     if (!content) {
-      throw new Error("No content received from OpenAI");
+      // Return empty array if no content received
+      return new Response(JSON.stringify([]), {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
     let rawQuestions;
@@ -105,7 +117,13 @@ Deno.serve(async (req) => {
       }
     } catch (error) {
       console.error("Failed to parse OpenAI response:", error);
-      throw new Error("Invalid response format from OpenAI");
+      // Return empty array on parsing error
+      return new Response(JSON.stringify([]), {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      });
     }
 
     // Format questions with additional fields
@@ -126,18 +144,12 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Error generating questions:", error);
-    return new Response(
-      JSON.stringify({ 
-        error: "Failed to generate questions", 
-        details: error instanceof Error ? error.message : "Unknown error" 
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    // Return empty array instead of error status
+    return new Response(JSON.stringify([]), {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+    });
   }
 });
