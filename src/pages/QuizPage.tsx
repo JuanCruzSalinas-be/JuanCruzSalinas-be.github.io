@@ -5,12 +5,12 @@ import { useUser } from '../context/UserContext';
 import Header from '../components/layout/Header';
 import Card, { CardContent, CardHeader, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { ChevronLeft, ChevronRight, Check, X, Award } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, Award, Loader } from 'lucide-react';
 import useSound from 'use-sound';
 
 const QuizPage: React.FC = () => {
   const { quizId } = useParams<{ quizId: string }>();
-  const { categories, selectedQuiz, setSelectedQuiz, completeQuiz } = useQuiz();
+  const { categories, selectedQuiz, setSelectedQuiz, completeQuiz, loadQuizQuestions, quizLoading } = useQuiz();
   const { gainXP } = useUser();
   const navigate = useNavigate();
   
@@ -26,33 +26,62 @@ const QuizPage: React.FC = () => {
   const [playCorrect] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3', { volume: 0.5 });
   const [playIncorrect] = useSound('https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3', { volume: 0.5 });
   
-  // Find the quiz if not already selected
+  // Find and load the quiz if not already selected
   useEffect(() => {
-    if (!selectedQuiz && quizId) {
-      for (const category of categories) {
-        const quiz = category.quizzes.find(q => q.id === quizId);
-        if (quiz) {
-          setSelectedQuiz(quiz);
-          break;
+    const loadQuiz = async () => {
+      if (!selectedQuiz && quizId) {
+        for (const category of categories) {
+          const quiz = category.quizzes.find(q => q.id === quizId);
+          if (quiz) {
+            setSelectedQuiz(quiz);
+            if (quiz.questions.length === 0) {
+              await loadQuizQuestions(quizId);
+            }
+            break;
+          }
         }
       }
-    }
-  }, [quizId, categories, selectedQuiz, setSelectedQuiz]);
+    };
+    
+    loadQuiz();
+  }, [quizId, categories, selectedQuiz, setSelectedQuiz, loadQuizQuestions]);
   
-  // If no quiz found, show error
-  if (!selectedQuiz) {
+  // Loading state
+  if (quizLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Quiz Not Found</h1>
-          <Button onClick={() => navigate('/categories')}>
-            Back to Categories
-          </Button>
-        </div>
+      <div className="min-h-screen bg-gray-100">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="py-12 flex flex-col items-center justify-center">
+              <Loader className="w-12 h-12 text-blue-600 animate-spin mb-4" />
+              <p className="text-xl text-gray-600">Loading quiz questions...</p>
+            </CardContent>
+          </Card>
+        </main>
       </div>
     );
   }
   
+  // If no quiz found or questions not loaded, show error
+  if (!selectedQuiz || selectedQuiz.questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="py-12 text-center">
+              <h1 className="text-2xl font-bold text-gray-900 mb-4">Quiz Not Found</h1>
+              <Button onClick={() => navigate('/categories')}>
+                Back to Categories
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
   const { questions } = selectedQuiz;
   const currentQuestion = questions[currentQuestionIndex];
   
@@ -84,13 +113,12 @@ const QuizPage: React.FC = () => {
     }
   };
 
-  // When user chooses to finish, then call completeQuiz and gainXP
   const handleFinishQuiz = () => {
     const finalScore = Math.round((score / questions.length) * 100);
     completeQuiz(selectedQuiz.id, finalScore, earnedXp);
     gainXP(earnedXp);
     setSelectedQuiz(null);
-    setTimeout(() => navigate('/dashboard'), 10); // Use setTimeout to ensure state is updated before navigating
+    setTimeout(() => navigate('/dashboard'), 10);
   };
   
   if (showResults) {
