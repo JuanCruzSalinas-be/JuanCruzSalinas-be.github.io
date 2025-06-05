@@ -21,20 +21,20 @@ const Button: React.FC<ButtonProps> = ({
   disabled = false,
   className = '',
 }) => {
-  const baseClasses = 'rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2';
+  const baseClasses = 'rounded-2xl font-medium transition-all duration-200 shadow-sm hover:shadow-md active:scale-95';
   
   const variantClasses = {
-    primary: 'bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-400',
-    secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-400',
-    success: 'bg-green-500 text-white hover:bg-green-600 focus:ring-green-400',
-    danger: 'bg-red-500 text-white hover:bg-red-600 focus:ring-red-400',
-    outline: 'bg-transparent text-primary-600 border border-primary-500 hover:bg-primary-50 focus:ring-primary-400',
+    primary: 'bg-primary-500 text-white hover:bg-primary-600 active:bg-primary-700',
+    secondary: 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300',
+    success: 'bg-green-500 text-white hover:bg-green-600 active:bg-green-700',
+    danger: 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700',
+    outline: 'bg-white text-primary-600 border-2 border-primary-500 hover:bg-primary-50 active:bg-primary-100',
   };
   
   const sizeClasses = {
     sm: 'py-1.5 px-3 text-sm',
-    md: 'py-2 px-4 text-base',
-    lg: 'py-2.5 px-5 text-lg',
+    md: 'py-2.5 px-5 text-base',
+    lg: 'py-3 px-6 text-lg',
   };
   
   const widthClass = fullWidth ? 'w-full' : '';
