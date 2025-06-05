@@ -15,6 +15,7 @@ interface QuizContextType {
   completeQuiz: (quizId: string, score: number, earnedXp: number) => void;
   completeQuest: (questId: string) => void;
   resetDailyQuests: () => void;
+  loading: boolean;
 }
 
 const QuizContext = createContext<QuizContextType>({
@@ -28,7 +29,8 @@ const QuizContext = createContext<QuizContextType>({
   setSelectedQuiz: () => {},
   completeQuiz: () => {},
   completeQuest: () => {},
-  resetDailyQuests: () => {}
+  resetDailyQuests: () => {},
+  loading: true
 });
 
 export const useQuiz = () => useContext(QuizContext);
@@ -40,39 +42,52 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [completedQuizzes, setCompletedQuizzes] = useState<string[]>([]);
   const [completedQuests, setCompletedQuests] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      // Load personal info
-      const storedPersonalInfo = localStorage.getItem(`${user.id}_personalInfo`);
-      const personalInfo = storedPersonalInfo ? JSON.parse(storedPersonalInfo) as PersonalInfo : undefined;
-      
-      // Generate categories with personalized questions
-      setQuizCategories(generateCategories(personalInfo));
-      
-      // Load completed quizzes
-      const storedCompletedQuizzes = localStorage.getItem(`${user.id}_completedQuizzes`);
-      if (storedCompletedQuizzes) {
-        setCompletedQuizzes(JSON.parse(storedCompletedQuizzes));
-      }
-      
-      // Load completed quests
-      const storedCompletedQuests = localStorage.getItem(`${user.id}_completedQuests`);
-      if (storedCompletedQuests) {
-        setCompletedQuests(JSON.parse(storedCompletedQuests));
-      }
+    const initializeQuizzes = async () => {
+      if (isAuthenticated && user?.id) {
+        try {
+          setLoading(true);
+          // Load personal info
+          const storedPersonalInfo = localStorage.getItem(`${user.id}_personalInfo`);
+          const personalInfo = storedPersonalInfo ? JSON.parse(storedPersonalInfo) as PersonalInfo : undefined;
+          
+          // Generate categories with personalized questions
+          const categories = await generateCategories(personalInfo);
+          setQuizCategories(categories);
+          
+          // Load completed quizzes
+          const storedCompletedQuizzes = localStorage.getItem(`${user.id}_completedQuizzes`);
+          if (storedCompletedQuizzes) {
+            setCompletedQuizzes(JSON.parse(storedCompletedQuizzes));
+          }
+          
+          // Load completed quests
+          const storedCompletedQuests = localStorage.getItem(`${user.id}_completedQuests`);
+          if (storedCompletedQuests) {
+            setCompletedQuests(JSON.parse(storedCompletedQuests));
+          }
 
-      // Check if we need to reset daily quests
-      const lastResetDate = localStorage.getItem(`${user.id}_lastQuestReset`);
-      const today = new Date().toDateString();
-      
-      if (lastResetDate !== today) {
-        resetDailyQuests();
-        localStorage.setItem(`${user.id}_lastQuestReset`, today);
+          // Check if we need to reset daily quests
+          const lastResetDate = localStorage.getItem(`${user.id}_lastQuestReset`);
+          const today = new Date().toDateString();
+          
+          if (lastResetDate !== today) {
+            resetDailyQuests();
+            localStorage.setItem(`${user.id}_lastQuestReset`, today);
+          }
+        } catch (error) {
+          console.error('Error initializing quizzes:', error);
+        } finally {
+          setLoading(false);
+        }
       }
-    }
+    };
+
+    initializeQuizzes();
   }, [isAuthenticated, user]);
 
   const completeQuiz = (quizId: string, score: number, earnedXp: number) => {
@@ -143,9 +158,12 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSelectedQuiz,
       completeQuiz,
       completeQuest,
-      resetDailyQuests
+      resetDailyQuests,
+      loading
     }}>
       {children}
     </QuizContext.Provider>
   );
 };
+
+export { QuizProvider }
