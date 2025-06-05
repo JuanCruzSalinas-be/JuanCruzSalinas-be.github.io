@@ -11,6 +11,31 @@ const shuffleArray = <T>(array: T[]): T[] => {
   return shuffled;
 };
 
+// Generate default questions for fallback
+const generateDefaultQuestions = (category: string, difficulty: 'easy' | 'medium' | 'hard'): Question[] => {
+  const defaultQuestions: Question[] = [
+    {
+      id: `${category}-1`,
+      text: 'What is the first thing you typically do in the morning?',
+      options: ['Wake up and stretch', 'Check phone', 'Brush teeth', 'Make coffee'],
+      correctAnswer: 'Wake up and stretch',
+      difficulty,
+      xpReward: { easy: 10, medium: 20, hard: 30 }[difficulty]
+    },
+    {
+      id: `${category}-2`,
+      text: 'Which activity is important for daily routine?',
+      options: ['Taking medication', 'Playing video games', 'Watching TV', 'Social media'],
+      correctAnswer: 'Taking medication',
+      difficulty,
+      xpReward: { easy: 10, medium: 20, hard: 30 }[difficulty]
+    },
+    // Add more default questions...
+  ];
+
+  return shuffleArray(defaultQuestions);
+};
+
 // Generate questions using AI
 const generatePersonalizedQuestions = async (
   category: string,
@@ -32,22 +57,18 @@ const generatePersonalizedQuestions = async (
     });
 
     if (!response.ok) {
-      throw new Error('Failed to generate questions');
+      const errorData = await response.json();
+      console.warn('Using fallback questions due to API error:', errorData);
+      return generateDefaultQuestions(category, difficulty);
     }
 
     const questions = await response.json();
-    return shuffleArray(questions);
+    return Array.isArray(questions) && questions.length > 0 
+      ? shuffleArray(questions)
+      : generateDefaultQuestions(category, difficulty);
   } catch (error) {
-    console.error('Error generating questions:', error);
-    // Return default questions if AI generation fails
-    return Array(10).fill(null).map((_, index) => ({
-      id: `${category}-${index}`,
-      text: `Default Question ${index + 1}`,
-      options: ['Option A', 'Option B', 'Option C', 'Option D'],
-      correctAnswer: 'Option A',
-      difficulty,
-      xpReward: { easy: 10, medium: 20, hard: 30 }[difficulty]
-    }));
+    console.warn('Error generating questions, using fallback:', error);
+    return generateDefaultQuestions(category, difficulty);
   }
 };
 

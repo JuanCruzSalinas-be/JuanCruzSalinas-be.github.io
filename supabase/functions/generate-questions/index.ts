@@ -53,11 +53,16 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!apiKey) {
+      throw new Error("OpenAI API key is not configured");
+    }
+
     const { category, difficulty, personalInfo } = await req.json() as RequestBody;
 
     // Initialize OpenAI
     const configuration = new Configuration({
-      apiKey: Deno.env.get("OPENAI_API_KEY"),
+      apiKey,
     });
     const openai = new OpenAIApi(configuration);
 
@@ -87,7 +92,21 @@ Deno.serve(async (req) => {
       ],
     });
 
-    const rawQuestions = JSON.parse(completion.data.choices[0].message?.content || "[]");
+    const content = completion.data.choices[0].message?.content;
+    if (!content) {
+      throw new Error("No content received from OpenAI");
+    }
+
+    let rawQuestions;
+    try {
+      rawQuestions = JSON.parse(content);
+      if (!Array.isArray(rawQuestions)) {
+        throw new Error("OpenAI response is not an array");
+      }
+    } catch (error) {
+      console.error("Failed to parse OpenAI response:", error);
+      throw new Error("Invalid response format from OpenAI");
+    }
 
     // Format questions with additional fields
     const questions: Question[] = rawQuestions.map((q: any, index: number) => ({
@@ -108,7 +127,10 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Error generating questions:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to generate questions" }),
+      JSON.stringify({ 
+        error: "Failed to generate questions", 
+        details: error instanceof Error ? error.message : "Unknown error" 
+      }),
       {
         status: 500,
         headers: {
