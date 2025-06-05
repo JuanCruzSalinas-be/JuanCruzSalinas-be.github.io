@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { DailyQuest, Quiz, Category, PersonalInfo } from '../types';
-import { generateCategories, dailyQuests } from '../data/quizzes';
+import { categories as initialCategories, dailyQuests, generatePersonalizedQuestions } from '../data/quizzes';
 import { useAuth } from './AuthContext';
 
 interface QuizContextType {
@@ -16,6 +16,8 @@ interface QuizContextType {
   completeQuest: (questId: string) => void;
   resetDailyQuests: () => void;
   loading: boolean;
+  loadQuizQuestions: (quizId: string) => Promise<void>;
+  quizLoading: boolean;
 }
 
 const QuizContext = createContext<QuizContextType>({
@@ -30,19 +32,22 @@ const QuizContext = createContext<QuizContextType>({
   completeQuiz: () => {},
   completeQuest: () => {},
   resetDailyQuests: () => {},
-  loading: true
+  loading: true,
+  loadQuizQuestions: async () => {},
+  quizLoading: false
 });
 
 export const useQuiz = () => useContext(QuizContext);
 
 export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [quizCategories, setQuizCategories] = useState<Category[]>([]);
+  const [quizCategories, setQuizCategories] = useState<Category[]>(initialCategories);
   const [quizDailyQuests, setQuizDailyQuests] = useState<DailyQuest[]>(dailyQuests);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [completedQuizzes, setCompletedQuizzes] = useState<string[]>([]);
   const [completedQuests, setCompletedQuests] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [quizLoading, setQuizLoading] = useState(false);
   
   const { user, isAuthenticated } = useAuth();
 
@@ -51,13 +56,6 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (isAuthenticated && user?.id) {
         try {
           setLoading(true);
-          // Load personal info
-          const storedPersonalInfo = localStorage.getItem(`${user.id}_personalInfo`);
-          const personalInfo = storedPersonalInfo ? JSON.parse(storedPersonalInfo) as PersonalInfo : undefined;
-          
-          // Generate categories with personalized questions
-          const categories = await generateCategories(personalInfo);
-          setQuizCategories(categories);
           
           // Load completed quizzes
           const storedCompletedQuizzes = localStorage.getItem(`${user.id}_completedQuizzes`);
@@ -89,6 +87,59 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initializeQuizzes();
   }, [isAuthenticated, user]);
+
+  const loadQuizQuestions = async (quizId: string) => {
+    try {
+      setQuizLoading(true);
+      
+      // Find the quiz in categories
+      let foundQuiz: Quiz | null = null;
+      let categoryIndex = -1;
+      let quizIndex = -1;
+      
+      for (let i = 0; i < quizCategories.length; i++) {
+        const category = quizCategories[i];
+        const qIndex = category.quizzes.findIndex(q => q.id === quizId);
+        if (qIndex !== -1) {
+          foundQuiz = category.quizzes[qIndex];
+          categoryIndex = i;
+          quizIndex = qIndex;
+          break;
+        }
+      }
+      
+      if (!foundQuiz || categoryIndex === -1 || quizIndex === -1) {
+        throw new Error('Quiz not found');
+      }
+      
+      // Generate questions if not already loaded
+      if (foundQuiz.questions.length === 0) {
+        const [category, difficulty] = quizId.split('-');
+        const questions = await generatePersonalizedQuestions(
+          category,
+          difficulty as 'easy' | 'medium' | 'hard',
+          user?.personalInfo
+        );
+        
+        // Update the quiz with new questions
+        const updatedCategories = [...quizCategories];
+        updatedCategories[categoryIndex].quizzes[quizIndex].questions = questions;
+        setQuizCategories(updatedCategories);
+        
+        // Update selected quiz if this is the current quiz
+        if (selectedQuiz?.id === quizId) {
+          setSelectedQuiz({
+            ...selectedQuiz,
+            questions
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading quiz questions:', error);
+    } finally {
+      setQuizLoading(false);
+    }
+  };
 
   const completeQuiz = (quizId: string, score: number, earnedXp: number) => {
     if (!isAuthenticated) return;
@@ -159,9 +210,11 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
       completeQuiz,
       completeQuest,
       resetDailyQuests,
-      loading
+      loading,
+      loadQuizQuestions,
+      quizLoading
     }}>
       {children}
     </QuizContext.Provider>
   );
-}
+};
