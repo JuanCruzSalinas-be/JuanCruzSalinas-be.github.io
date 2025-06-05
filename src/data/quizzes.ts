@@ -29,15 +29,14 @@ const generateDefaultQuestions = (category: string, difficulty: 'easy' | 'medium
       correctAnswer: 'Taking medication',
       difficulty,
       xpReward: { easy: 10, medium: 20, hard: 30 }[difficulty]
-    },
-    // Add more default questions...
+    }
   ];
 
   return shuffleArray(defaultQuestions);
 };
 
 // Generate questions using AI
-const generatePersonalizedQuestions = async (
+export const generatePersonalizedQuestions = async (
   category: string,
   difficulty: 'easy' | 'medium' | 'hard',
   personalInfo?: PersonalInfo
@@ -57,8 +56,7 @@ const generatePersonalizedQuestions = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      console.warn('Using fallback questions due to API error:', errorData);
+      console.warn('Using fallback questions due to API error');
       return generateDefaultQuestions(category, difficulty);
     }
 
@@ -72,49 +70,45 @@ const generatePersonalizedQuestions = async (
   }
 };
 
-// Categories with quizzes
-export const generateCategories = async (personalInfo?: PersonalInfo): Promise<Category[]> => {
-  const categories: Category[] = [
-    {
-      id: 'dailyTasks',
-      title: 'Daily Tasks',
-      description: 'Practice remembering everyday activities and their steps.',
-      icon: 'Home',
-      backgroundColor: 'bg-green-500',
-      quizzes: [
-        {
-          id: 'dailyTasks-easy',
-          title: 'Basic Daily Activities',
-          description: 'Simple questions about common daily activities',
-          icon: 'Home',
-          questions: await generatePersonalizedQuestions('dailyTasks', 'easy', personalInfo),
-          xpReward: 50
-        },
-        {
-          id: 'dailyTasks-medium',
-          title: 'Intermediate Daily Activities',
-          description: 'Moderate questions about daily routines',
-          icon: 'Home',
-          questions: await generatePersonalizedQuestions('dailyTasks', 'medium', personalInfo),
-          xpReward: 100
-        },
-        {
-          id: 'dailyTasks-hard',
-          title: 'Advanced Daily Activities',
-          description: 'Challenging questions about complex daily tasks',
-          icon: 'Home',
-          questions: await generatePersonalizedQuestions('dailyTasks', 'hard', personalInfo),
-          xpReward: 150
-        }
-      ]
-    },
-    // ... other categories with their quizzes
-  ];
+// Categories with empty question arrays initially
+export const categories: Category[] = [
+  {
+    id: 'dailyTasks',
+    title: 'Daily Tasks',
+    description: 'Practice remembering everyday activities and their steps.',
+    icon: 'Home',
+    backgroundColor: 'bg-green-500',
+    quizzes: [
+      {
+        id: 'dailyTasks-easy',
+        title: 'Basic Daily Activities',
+        description: 'Simple questions about common daily activities',
+        icon: 'Home',
+        questions: [], // Empty initially
+        xpReward: 50
+      },
+      {
+        id: 'dailyTasks-medium',
+        title: 'Intermediate Daily Activities',
+        description: 'Moderate questions about daily routines',
+        icon: 'Home',
+        questions: [], // Empty initially
+        xpReward: 100
+      },
+      {
+        id: 'dailyTasks-hard',
+        title: 'Advanced Daily Activities',
+        description: 'Challenging questions about complex daily tasks',
+        icon: 'Home',
+        questions: [], // Empty initially
+        xpReward: 150
+      }
+    ]
+  }
+  // ... other categories with empty question arrays
+];
 
-  return categories;
-};
-
-// Daily quests
+// Daily quests remain unchanged
 export const dailyQuests: DailyQuest[] = [
   {
     id: 'quest1',
@@ -146,7 +140,7 @@ export const dailyQuests: DailyQuest[] = [
   }
 ];
 
-// Helper function to get icon component
+// Helper function to get icon component remains unchanged
 export const getIconComponent = (iconName: string) => {
   switch (iconName) {
     case 'Home':
