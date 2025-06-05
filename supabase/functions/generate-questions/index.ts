@@ -72,6 +72,30 @@ async function retryWithBackoff<T>(
   throw lastError;
 }
 
+// Generate default questions if OpenAI fails
+function generateDefaultQuestions(category: string, difficulty: string): Question[] {
+  const baseQuestions = [
+    {
+      text: "What is typically the first thing you do after waking up?",
+      options: ["Brush teeth", "Make coffee", "Check phone", "Take a shower"],
+      correctAnswer: "Brush teeth"
+    },
+    {
+      text: "Which appliance would you use to heat up leftovers quickly?",
+      options: ["Oven", "Microwave", "Stovetop", "Toaster"],
+      correctAnswer: "Microwave"
+    },
+    // Add more default questions as needed
+  ];
+
+  return baseQuestions.map((q, index) => ({
+    id: `${category}-${difficulty}-${index}`,
+    ...q,
+    difficulty: difficulty as 'easy' | 'medium' | 'hard',
+    xpReward: { easy: 10, medium: 20, hard: 30 }[difficulty as 'easy' | 'medium' | 'hard']
+  }));
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -82,22 +106,25 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get("OPENAI_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify([]), {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
-    }
-
     const { category, difficulty, personalInfo } = await req.json() as RequestBody;
 
+    // If no OpenAI key is available, return default questions
+    const apiKey = Deno.env.get("OPENAI_API_KEY");
+    if (!apiKey) {
+      console.log("No OpenAI API key found, using default questions");
+      return new Response(
+        JSON.stringify(generateDefaultQuestions(category, difficulty)),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
     // Initialize OpenAI
-    const configuration = new Configuration({
-      apiKey,
-    });
+    const configuration = new Configuration({ apiKey });
     const openai = new OpenAIApi(configuration);
 
     // Create the prompt based on category and difficulty
@@ -132,12 +159,16 @@ Deno.serve(async (req) => {
 
     const content = completion.data.choices[0].message?.content;
     if (!content) {
-      return new Response(JSON.stringify([]), {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+      console.log("No content in OpenAI response, using default questions");
+      return new Response(
+        JSON.stringify(generateDefaultQuestions(category, difficulty)),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     let rawQuestions;
@@ -148,12 +179,15 @@ Deno.serve(async (req) => {
       }
     } catch (error) {
       console.error("Failed to parse OpenAI response:", error);
-      return new Response(JSON.stringify([]), {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      });
+      return new Response(
+        JSON.stringify(generateDefaultQuestions(category, difficulty)),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
 
     // Format questions with additional fields
@@ -174,11 +208,14 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Error generating questions:", error);
-    return new Response(JSON.stringify([]), {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
-    });
+    return new Response(
+      JSON.stringify(generateDefaultQuestions(category, 'easy')),
+      {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+      }
+    );
   }
 });

@@ -13,7 +13,7 @@ const shuffleArray = <T>(array: T[]): T[] => {
 
 // Generate default questions for fallback
 const generateDefaultQuestions = (category: string, difficulty: 'easy' | 'medium' | 'hard'): Question[] => {
-  const defaultQuestions: Question[] = [
+  const baseQuestions: Question[] = [
     {
       id: `${category}-1`,
       text: 'What is the first thing you typically do in the morning?',
@@ -29,19 +29,38 @@ const generateDefaultQuestions = (category: string, difficulty: 'easy' | 'medium
       correctAnswer: 'Taking medication',
       difficulty,
       xpReward: { easy: 10, medium: 20, hard: 30 }[difficulty]
+    },
+    // Add more default questions to ensure we have enough
+    {
+      id: `${category}-3`,
+      text: 'What should you do before going to bed?',
+      options: ['Brush teeth', 'Watch TV', 'Drink coffee', 'Exercise'],
+      correctAnswer: 'Brush teeth',
+      difficulty,
+      xpReward: { easy: 10, medium: 20, hard: 30 }[difficulty]
+    },
+    {
+      id: `${category}-4`,
+      text: 'Which is a healthy morning habit?',
+      options: ['Drink water', 'Skip breakfast', 'Check social media', 'Stay in bed'],
+      correctAnswer: 'Drink water',
+      difficulty,
+      xpReward: { easy: 10, medium: 20, hard: 30 }[difficulty]
     }
   ];
 
-  return shuffleArray(defaultQuestions);
+  // Return shuffled questions
+  return shuffleArray(baseQuestions);
 };
 
-// Generate questions using AI
+// Generate questions using Edge Function
 export const generatePersonalizedQuestions = async (
   category: string,
   difficulty: 'easy' | 'medium' | 'hard',
   personalInfo?: PersonalInfo
 ): Promise<Question[]> => {
   try {
+    // First try to get questions from the Edge Function
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-questions`, {
       method: 'POST',
       headers: {
@@ -56,7 +75,7 @@ export const generatePersonalizedQuestions = async (
     });
 
     if (!response.ok) {
-      console.warn('Using fallback questions due to API error');
+      console.warn(`API error (${response.status}), using fallback questions`);
       return generateDefaultQuestions(category, difficulty);
     }
 
@@ -105,7 +124,7 @@ export const categories: Category[] = [
       }
     ]
   }
-  // ... other categories with empty question arrays
+  // Other categories remain the same
 ];
 
 // Daily quests remain unchanged
