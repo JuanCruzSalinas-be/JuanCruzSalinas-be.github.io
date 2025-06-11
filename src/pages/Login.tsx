@@ -28,9 +28,21 @@ const Login: React.FC = () => {
       setLoading(true);
       await login(email, password);
       navigate('/dashboard');
-    } catch (err) {
-      setError('Failed to sign in. Please check your credentials.');
-      console.error(err);
+    } catch (err: any) {
+      console.error('Login error:', err);
+      
+      // Handle different types of authentication errors
+      if (err?.message?.includes('Invalid login credentials') || err?.message?.includes('invalid_credentials')) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else if (err?.message?.includes('Email not confirmed')) {
+        setError('Please check your email and confirm your account before signing in.');
+      } else if (err?.message?.includes('Too many requests')) {
+        setError('Too many login attempts. Please wait a moment before trying again.');
+      } else if (err?.message?.includes('Network')) {
+        setError('Network error. Please check your internet connection and try again.');
+      } else {
+        setError('Failed to sign in. Please try again or contact support if the problem persists.');
+      }
     } finally {
       setLoading(false);
     }
