@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useQuiz } from '../context/QuizContext';
 import Header from '../components/layout/Header';
 import CategoryCard from '../components/quiz/CategoryCard';
-import SupabaseConnectionChecker from '../components/quiz/SupabaseConnectionChecker';
+import ConnectionStatus from '../components/quiz/ConnectionStatus';
 
 const Categories: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -23,7 +23,7 @@ const Categories: React.FC = () => {
           </p>
         </div>
         
-        <SupabaseConnectionChecker />
+        <ConnectionStatus />
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {categories.map(category => (
