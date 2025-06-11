@@ -14,7 +14,14 @@ const Survey: React.FC = () => {
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>(() => {
     // Initialize with existing data if available
     if (user?.personalInfo) {
-      return user.personalInfo;
+      return {
+        age: user.personalInfo.age || 0,
+        interests: user.personalInfo.interests || [],
+        familyMembers: user.personalInfo.familyMembers || [],
+        dailyRoutine: user.personalInfo.dailyRoutine || [],
+        importantDates: user.personalInfo.importantDates || [],
+        favoriteLocations: user.personalInfo.favoriteLocations || []
+      };
     }
     return {
       age: 0,
@@ -32,10 +39,14 @@ const Survey: React.FC = () => {
   const [newDate, setNewDate] = useState<ImportantDate>({ date: '', description: '', type: 'birthday' });
   const [newLocation, setNewLocation] = useState('');
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updatePersonalInfo(personalInfo);
-    navigate('/dashboard');
+    try {
+      await updatePersonalInfo(personalInfo);
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error updating personal info:', error);
+    }
   };
   
   return (
@@ -57,7 +68,7 @@ const Survey: React.FC = () => {
                   value={personalInfo.age || ''}
                   onChange={(e) => setPersonalInfo({
                     ...personalInfo,
-                    age: parseInt(e.target.value)
+                    age: parseInt(e.target.value) || 0
                   })}
                 />
               </div>
@@ -75,10 +86,10 @@ const Survey: React.FC = () => {
                   <Button
                     type="button"
                     onClick={() => {
-                      if (newInterest) {
+                      if (newInterest.trim()) {
                         setPersonalInfo({
                           ...personalInfo,
-                          interests: [...personalInfo.interests, newInterest]
+                          interests: [...personalInfo.interests, newInterest.trim()]
                         });
                         setNewInterest('');
                       }
@@ -88,7 +99,7 @@ const Survey: React.FC = () => {
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {personalInfo.interests.map((interest, index) => (
+                  {personalInfo.interests?.map((interest, index) => (
                     <span
                       key={index}
                       className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center"
@@ -105,7 +116,7 @@ const Survey: React.FC = () => {
                         ×
                       </button>
                     </span>
-                  ))}
+                  )) || []}
                 </div>
               </div>
               
@@ -133,10 +144,13 @@ const Survey: React.FC = () => {
                   <Button
                     type="button"
                     onClick={() => {
-                      if (newFamilyMember.name && newFamilyMember.relation) {
+                      if (newFamilyMember.name.trim() && newFamilyMember.relation.trim()) {
                         setPersonalInfo({
                           ...personalInfo,
-                          familyMembers: [...personalInfo.familyMembers, newFamilyMember]
+                          familyMembers: [...personalInfo.familyMembers, {
+                            name: newFamilyMember.name.trim(),
+                            relation: newFamilyMember.relation.trim()
+                          }]
                         });
                         setNewFamilyMember({ name: '', relation: '' });
                       }
@@ -146,7 +160,7 @@ const Survey: React.FC = () => {
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  {personalInfo.familyMembers.map((member, index) => (
+                  {personalInfo.familyMembers?.map((member, index) => (
                     <div
                       key={index}
                       className="bg-gray-50 p-2 rounded-md flex justify-between items-center"
@@ -163,7 +177,7 @@ const Survey: React.FC = () => {
                         Remove
                       </button>
                     </div>
-                  ))}
+                  )) || []}
                 </div>
               </div>
               
@@ -180,10 +194,10 @@ const Survey: React.FC = () => {
                   <Button
                     type="button"
                     onClick={() => {
-                      if (newRoutine) {
+                      if (newRoutine.trim()) {
                         setPersonalInfo({
                           ...personalInfo,
-                          dailyRoutine: [...personalInfo.dailyRoutine, newRoutine]
+                          dailyRoutine: [...personalInfo.dailyRoutine, newRoutine.trim()]
                         });
                         setNewRoutine('');
                       }
@@ -193,7 +207,7 @@ const Survey: React.FC = () => {
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  {personalInfo.dailyRoutine.map((routine, index) => (
+                  {personalInfo.dailyRoutine?.map((routine, index) => (
                     <div
                       key={index}
                       className="bg-gray-50 p-2 rounded-md flex justify-between items-center"
@@ -210,7 +224,7 @@ const Survey: React.FC = () => {
                         Remove
                       </button>
                     </div>
-                  ))}
+                  )) || []}
                 </div>
               </div>
               
@@ -251,10 +265,14 @@ const Survey: React.FC = () => {
                   <Button
                     type="button"
                     onClick={() => {
-                      if (newDate.date && newDate.description) {
+                      if (newDate.date.trim() && newDate.description.trim()) {
                         setPersonalInfo({
                           ...personalInfo,
-                          importantDates: [...personalInfo.importantDates, newDate]
+                          importantDates: [...personalInfo.importantDates, {
+                            date: newDate.date.trim(),
+                            description: newDate.description.trim(),
+                            type: newDate.type
+                          }]
                         });
                         setNewDate({ date: '', description: '', type: 'birthday' });
                       }
@@ -264,7 +282,7 @@ const Survey: React.FC = () => {
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  {personalInfo.importantDates.map((date, index) => (
+                  {personalInfo.importantDates?.map((date, index) => (
                     <div
                       key={index}
                       className="bg-gray-50 p-2 rounded-md flex justify-between items-center"
@@ -284,7 +302,7 @@ const Survey: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                  ))}
+                  )) || []}
                 </div>
               </div>
               
@@ -301,10 +319,10 @@ const Survey: React.FC = () => {
                   <Button
                     type="button"
                     onClick={() => {
-                      if (newLocation) {
+                      if (newLocation.trim()) {
                         setPersonalInfo({
                           ...personalInfo,
-                          favoriteLocations: [...personalInfo.favoriteLocations, newLocation]
+                          favoriteLocations: [...personalInfo.favoriteLocations, newLocation.trim()]
                         });
                         setNewLocation('');
                       }
@@ -314,7 +332,7 @@ const Survey: React.FC = () => {
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {personalInfo.favoriteLocations.map((location, index) => (
+                  {personalInfo.favoriteLocations?.map((location, index) => (
                     <span
                       key={index}
                       className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm flex items-center"
@@ -331,7 +349,7 @@ const Survey: React.FC = () => {
                         ×
                       </button>
                     </span>
-                  ))}
+                  )) || []}
                 </div>
               </div>
               

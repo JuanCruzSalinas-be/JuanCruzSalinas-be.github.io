@@ -14,16 +14,14 @@ import Survey from './pages/Survey';
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isChecking, setIsChecking] = React.useState(true);
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
 
   React.useEffect(() => {
-    // Check authentication status from context instead of localStorage
-    const checkAuth = () => {
-      // This will be handled by the AuthProvider
+    // Simple check - just stop loading after a brief moment
+    const timer = setTimeout(() => {
       setIsChecking(false);
-    };
+    }, 100);
     
-    checkAuth();
+    return () => clearTimeout(timer);
   }, []);
 
   if (isChecking) {

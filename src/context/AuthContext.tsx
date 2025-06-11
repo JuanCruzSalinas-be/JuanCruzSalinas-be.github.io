@@ -60,8 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data: profiles, error } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', userId)
-        .limit(1);
+        .eq('id', userId);
 
       if (error) {
         console.error('Error loading user profile:', error);
@@ -142,6 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
