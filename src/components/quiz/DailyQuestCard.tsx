@@ -14,16 +14,23 @@ const DailyQuestCard: React.FC<DailyQuestProps> = ({ quest }) => {
   const navigate = useNavigate();
   const { completeQuest } = useQuiz();
 
-  // This would normally determine the appropriate quiz to start based on the quest
+  // Map quest titles to appropriate quiz routes
   const handleStartQuest = () => {
     if (quest.title.includes('Daily Tasks')) {
       navigate('/quiz/dailyTasks-easy');
-    } else if (quest.title.includes('Family Recognition')) {
+    } else if (quest.title.includes('Family')) {
       navigate('/quiz/familyRecognition-easy');
-    } else if (quest.title.includes('Simple Tasks')) {
+    } else if (quest.title.includes('Problem Solver')) {
       navigate('/quiz/simpleTasks-easy');
+    } else if (quest.title.includes('Memory Champion')) {
+      navigate('/quiz/memoryExercises-easy');
+    } else if (quest.title.includes('Time Master')) {
+      navigate('/quiz/timeOrientation-easy');
+    } else if (quest.title.includes('Perfect Score') || quest.title.includes('Quiz Streak')) {
+      // For general quests, go to categories page
+      navigate('/categories');
     } else {
-      // For the "Perfect Score" quest or any other general quest
+      // Default fallback
       navigate('/categories');
     }
   };

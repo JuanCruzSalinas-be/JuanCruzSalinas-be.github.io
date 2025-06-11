@@ -5,19 +5,23 @@ import { useQuiz } from '../context/QuizContext';
 import Header from '../components/layout/Header';
 import LevelProgress from '../components/quiz/LevelProgress';
 import DailyQuestCard from '../components/quiz/DailyQuestCard';
+import CategoryCard from '../components/quiz/CategoryCard';
 import Card, { CardContent, CardHeader } from '../components/ui/Card';
-import { Trophy, Settings } from 'lucide-react';
+import { Trophy, Settings, Sparkles } from 'lucide-react';
 import Button from '../components/ui/Button';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const { dailyQuests, completedQuests } = useQuiz();
+  const { dailyQuests, completedQuests, categories } = useQuiz();
   const navigate = useNavigate();
   
   if (!user) {
     navigate('/login');
     return null;
   }
+
+  // Show featured categories (first 3)
+  const featuredCategories = categories.slice(0, 3);
   
   return (
     <div className="min-h-screen bg-gray-100">
@@ -29,16 +33,47 @@ const Dashboard: React.FC = () => {
             Welcome to MemoryLane, {user.name}!
           </h1>
           <p className="text-gray-600 mt-2">
-            Choose a quiz category to begin your memory journey.
+            Your personalized memory training journey awaits.
           </p>
-          <Button 
-            variant="outline"
-            className="mt-4"
-            onClick={() => navigate('/survey')}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Personalize Your Experience
-          </Button>
+          
+          {!user.personalInfo && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-center mb-2">
+                <Sparkles className="h-5 w-5 text-blue-600 mr-2" />
+                <span className="font-medium text-blue-800">Get Personalized Quizzes!</span>
+              </div>
+              <p className="text-blue-700 mb-3">
+                Complete your personal survey to unlock AI-generated quizzes tailored specifically for you.
+              </p>
+              <Button 
+                variant="primary"
+                onClick={() => navigate('/survey')}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Complete Survey Now
+              </Button>
+            </div>
+          )}
+          
+          {user.personalInfo && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-green-600 mr-2" />
+                <span className="text-green-800">
+                  Your quizzes are personalized based on your survey responses!
+                </span>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  className="ml-3"
+                  onClick={() => navigate('/survey')}
+                >
+                  <Settings className="h-4 w-4 mr-1" />
+                  Update
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
@@ -59,7 +94,7 @@ const Dashboard: React.FC = () => {
               </CardHeader>
               
               <CardContent>
-                {dailyQuests.map(quest => (
+                {dailyQuests.slice(0, 4).map(quest => (
                   <DailyQuestCard 
                     key={quest.id} 
                     quest={{
@@ -68,59 +103,71 @@ const Dashboard: React.FC = () => {
                     }}
                   />
                 ))}
+                {dailyQuests.length > 4 && (
+                  <div className="text-center mt-4">
+                    <button 
+                      className="text-blue-600 hover:underline text-sm"
+                      onClick={() => {/* Could expand to show all quests */}}
+                    >
+                      View {dailyQuests.length - 4} more quests
+                    </button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
         
         <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold text-gray-900">
-              Quiz Categories
+              Featured Quiz Categories
             </h2>
             <button 
-              className="text-blue-600 hover:underline"
+              className="text-blue-600 hover:underline font-medium"
               onClick={() => navigate('/categories')}
             >
-              View All Categories
+              View All Categories →
             </button>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Here we'd show a few featured categories */}
+            {featuredCategories.map(category => (
+              <CategoryCard key={category.id} category={category} />
+            ))}
           </div>
         </div>
         
         <div className="bg-white rounded-lg shadow-md p-6 border border-blue-100">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            How to Use MemoryLane
+            How MemoryLane Works
           </h2>
-          <ul className="space-y-2 text-gray-700">
-            <li className="flex items-start">
-              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-800 mr-2">
-                1
-              </span>
-              <span>Choose a quiz category that interests you</span>
-            </li>
-            <li className="flex items-start">
-              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-800 mr-2">
-                2
-              </span>
-              <span>Complete daily quests to earn XP and track your progress</span>
-            </li>
-            <li className="flex items-start">
-              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-800 mr-2">
-                3
-              </span>
-              <span>Practice regularly to strengthen your memory</span>
-            </li>
-            <li className="flex items-start">
-              <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-800 mr-2">
-                4
-              </span>
-              <span>Level up as you gain experience and unlock new challenges</span>
-            </li>
-          </ul>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-medium text-gray-900 mb-2">🎯 Personalized Experience</h3>
+              <p className="text-gray-700 text-sm">
+                Complete your personal survey to get AI-generated quizzes tailored to your interests, family, and daily routine.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 mb-2">🧠 Memory Training</h3>
+              <p className="text-gray-700 text-sm">
+                Practice with scientifically-designed exercises that adapt to your cognitive needs and preferences.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 mb-2">🏆 Daily Challenges</h3>
+              <p className="text-gray-700 text-sm">
+                Complete daily quests to earn XP, level up, and track your progress over time.
+              </p>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900 mb-2">📈 Progress Tracking</h3>
+              <p className="text-gray-700 text-sm">
+                Monitor your improvement with detailed statistics and celebrate your achievements.
+              </p>
+            </div>
+          </div>
         </div>
       </main>
     </div>

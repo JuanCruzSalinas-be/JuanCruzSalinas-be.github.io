@@ -112,27 +112,27 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Quiz not found');
       }
       
-      // Generate questions if not already loaded
-      if (foundQuiz.questions.length === 0) {
-        const [category, difficulty] = quizId.split('-');
-        const questions = await generatePersonalizedQuestions(
-          category,
-          difficulty as 'easy' | 'medium' | 'hard',
-          user?.personalInfo
-        );
-        
-        // Update the quiz with new questions
-        const updatedCategories = [...quizCategories];
-        updatedCategories[categoryIndex].quizzes[quizIndex].questions = questions;
-        setQuizCategories(updatedCategories);
-        
-        // Update selected quiz if this is the current quiz
-        if (selectedQuiz?.id === quizId) {
-          setSelectedQuiz({
-            ...selectedQuiz,
-            questions
-          });
-        }
+      // Always generate fresh questions for each quiz attempt
+      const [category, difficulty] = quizId.split('-');
+      console.log(`Generating personalized questions for ${category} (${difficulty}) with user info:`, user?.personalInfo);
+      
+      const questions = await generatePersonalizedQuestions(
+        category,
+        difficulty as 'easy' | 'medium' | 'hard',
+        user?.personalInfo
+      );
+      
+      // Update the quiz with new questions
+      const updatedCategories = [...quizCategories];
+      updatedCategories[categoryIndex].quizzes[quizIndex].questions = questions;
+      setQuizCategories(updatedCategories);
+      
+      // Update selected quiz if this is the current quiz
+      if (selectedQuiz?.id === quizId) {
+        setSelectedQuiz({
+          ...selectedQuiz,
+          questions
+        });
       }
     } catch (error) {
       console.error('Error loading quiz questions:', error);
@@ -148,11 +148,27 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCompletedQuizzes(updatedCompletedQuizzes);
     localStorage.setItem(`${user?.id}_completedQuizzes`, JSON.stringify(updatedCompletedQuizzes));
     
+    // Update quest completion based on quiz category and performance
+    const [category] = quizId.split('-');
     const updatedQuests = quizDailyQuests.map(quest => {
-      if (quest.description.includes(selectedQuiz?.title || '') && !quest.completed) {
+      // Complete category-specific quests
+      if (quest.title.includes('Daily Tasks') && category === 'dailyTasks' && !quest.completed) {
+        return { ...quest, completed: true };
+      }
+      if (quest.title.includes('Family') && category === 'familyRecognition' && !quest.completed) {
+        return { ...quest, completed: true };
+      }
+      if (quest.title.includes('Problem Solver') && category === 'simpleTasks' && !quest.completed) {
+        return { ...quest, completed: true };
+      }
+      if (quest.title.includes('Memory Champion') && category === 'memoryExercises' && !quest.completed) {
+        return { ...quest, completed: true };
+      }
+      if (quest.title.includes('Time Master') && category === 'timeOrientation' && !quest.completed) {
         return { ...quest, completed: true };
       }
       
+      // Complete perfect score quest
       if (quest.title === 'Perfect Score' && score === 100 && !quest.completed) {
         return { ...quest, completed: true };
       }
@@ -162,6 +178,7 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     setQuizDailyQuests(updatedQuests);
     
+    // Update completed quests in storage
     const newlyCompletedQuests = updatedQuests
       .filter(q => q.completed && !completedQuests.includes(q.id))
       .map(q => q.id);
@@ -170,6 +187,27 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedCompletedQuests = [...completedQuests, ...newlyCompletedQuests];
       setCompletedQuests(updatedCompletedQuests);
       localStorage.setItem(`${user?.id}_completedQuests`, JSON.stringify(updatedCompletedQuests));
+    }
+
+    // Check for quiz streak quest
+    const todayQuizzes = updatedCompletedQuizzes.filter(qId => {
+      // In a real app, you'd check the completion date
+      // For now, we'll assume all completed quizzes today
+      return true;
+    });
+
+    if (todayQuizzes.length >= 3) {
+      const streakQuest = updatedQuests.find(q => q.title === 'Quiz Streak');
+      if (streakQuest && !streakQuest.completed) {
+        const finalUpdatedQuests = updatedQuests.map(q => 
+          q.id === streakQuest.id ? { ...q, completed: true } : q
+        );
+        setQuizDailyQuests(finalUpdatedQuests);
+        
+        const finalCompletedQuests = [...completedQuests, ...newlyCompletedQuests, streakQuest.id];
+        setCompletedQuests(finalCompletedQuests);
+        localStorage.setItem(`${user?.id}_completedQuests`, JSON.stringify(finalCompletedQuests));
+      }
     }
   };
 
