@@ -139,21 +139,40 @@ const generateDefaultQuestions = (category: string, difficulty: 'easy' | 'medium
   }));
 };
 
+// Helper function to check if Supabase is properly configured
+const isSupabaseConfigured = (): boolean => {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  
+  return !!(
+    supabaseUrl && 
+    supabaseKey && 
+    supabaseUrl !== 'https://your-project.supabase.co' && 
+    supabaseKey !== 'your-anon-key' &&
+    supabaseUrl.includes('supabase.co') &&
+    supabaseKey.length > 20
+  );
+};
+
 // Enhanced AI question generation with better personalization
 export const generatePersonalizedQuestions = async (
   category: string,
   difficulty: 'easy' | 'medium' | 'hard',
   personalInfo?: PersonalInfo
 ): Promise<Question[]> => {
+  // First check if Supabase is properly configured
+  if (!isSupabaseConfigured()) {
+    console.log('Supabase not properly configured, using default questions');
+    return generateDefaultQuestions(category, difficulty);
+  }
+
   try {
-    // Check if we have Supabase environment variables
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
-    if (!supabaseUrl || !supabaseKey) {
-      console.log('Supabase not configured, using default questions');
-      return generateDefaultQuestions(category, difficulty);
-    }
+
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     const response = await fetch(`${supabaseUrl}/functions/v1/generate-questions`, {
       method: 'POST',
@@ -165,8 +184,11 @@ export const generatePersonalizedQuestions = async (
         category,
         difficulty,
         personalInfo
-      })
+      }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.warn(`API error (${response.status}), using fallback questions`);
@@ -178,7 +200,19 @@ export const generatePersonalizedQuestions = async (
       ? shuffleArray(questions)
       : generateDefaultQuestions(category, difficulty);
   } catch (error) {
-    console.warn('Error generating questions, using fallback:', error);
+    // Handle different types of errors
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        console.warn('Request timeout, using fallback questions');
+      } else if (error.message.includes('Failed to fetch')) {
+        console.warn('Network error or invalid Supabase configuration, using fallback questions');
+      } else {
+        console.warn('Error generating questions, using fallback:', error.message);
+      }
+    } else {
+      console.warn('Unknown error generating questions, using fallback:', error);
+    }
+    
     return generateDefaultQuestions(category, difficulty);
   }
 };

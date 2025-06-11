@@ -11,7 +11,9 @@ const QuizDebugInfo: React.FC = () => {
   
   const hasSupabase = supabaseUrl && supabaseKey && 
     supabaseUrl !== 'https://your-project.supabase.co' && 
-    supabaseKey !== 'your-anon-key';
+    supabaseKey !== 'your-anon-key' &&
+    supabaseUrl.includes('supabase.co') &&
+    supabaseKey.length > 20;
   
   const hasPersonalInfo = user?.personalInfo && (
     user.personalInfo.interests.length > 0 ||
