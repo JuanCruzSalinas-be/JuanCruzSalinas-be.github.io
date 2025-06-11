@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { DailyQuest, Quiz, Category, PersonalInfo } from '../types';
 import { categories as initialCategories, dailyQuests, generatePersonalizedQuestions } from '../data/quizzes';
 import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface QuizContextType {
   categories: Category[];
@@ -12,9 +13,9 @@ interface QuizContextType {
   completedQuests: string[];
   setSelectedCategory: (category: Category | null) => void;
   setSelectedQuiz: (quiz: Quiz | null) => void;
-  completeQuiz: (quizId: string, score: number, earnedXp: number) => void;
-  completeQuest: (questId: string) => void;
-  resetDailyQuests: () => void;
+  completeQuiz: (quizId: string, score: number, earnedXp: number) => Promise<void>;
+  completeQuest: (questId: string) => Promise<void>;
+  resetDailyQuests: () => Promise<void>;
   loading: boolean;
   loadQuizQuestions: (quizId: string) => Promise<void>;
   quizLoading: boolean;
@@ -29,9 +30,9 @@ const QuizContext = createContext<QuizContextType>({
   completedQuests: [],
   setSelectedCategory: () => {},
   setSelectedQuiz: () => {},
-  completeQuiz: () => {},
-  completeQuest: () => {},
-  resetDailyQuests: () => {},
+  completeQuiz: async () => {},
+  completeQuest: async () => {},
+  resetDailyQuests: async () => {},
   loading: true,
   loadQuizQuestions: async () => {},
   quizLoading: false
@@ -49,7 +50,70 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [quizLoading, setQuizLoading] = useState(false);
   
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, updateUserProgress } = useAuth();
+
+  // Load user's completed quizzes from database
+  const loadCompletedQuizzes = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_quiz_completions')
+        .select('quiz_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      const quizIds = data?.map(completion => completion.quiz_id) || [];
+      setCompletedQuizzes(quizIds);
+    } catch (error) {
+      console.error('Error loading completed quizzes:', error);
+    }
+  };
+
+  // Load user's completed quests from database
+  const loadCompletedQuests = async () => {
+    if (!user) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('user_quest_completions')
+        .select('quest_id')
+        .eq('user_id', user.id)
+        .eq('reset_date', today);
+
+      if (error) throw error;
+
+      const questIds = data?.map(completion => completion.quest_id) || [];
+      setCompletedQuests(questIds);
+    } catch (error) {
+      console.error('Error loading completed quests:', error);
+    }
+  };
+
+  // Reset daily quests (remove old completions)
+  const resetDailyQuests = async () => {
+    if (!user) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Delete quest completions from previous days
+      const { error } = await supabase
+        .from('user_quest_completions')
+        .delete()
+        .eq('user_id', user.id)
+        .neq('reset_date', today);
+
+      if (error) throw error;
+
+      // Reload current day's completions
+      await loadCompletedQuests();
+    } catch (error) {
+      console.error('Error resetting daily quests:', error);
+    }
+  };
 
   useEffect(() => {
     const initializeQuizzes = async () => {
@@ -57,24 +121,17 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           setLoading(true);
           
-          // Load completed quizzes
-          const storedCompletedQuizzes = localStorage.getItem(`${user.id}_completedQuizzes`);
-          if (storedCompletedQuizzes) {
-            setCompletedQuizzes(JSON.parse(storedCompletedQuizzes));
-          }
-          
-          // Load completed quests
-          const storedCompletedQuests = localStorage.getItem(`${user.id}_completedQuests`);
-          if (storedCompletedQuests) {
-            setCompletedQuests(JSON.parse(storedCompletedQuests));
-          }
+          await Promise.all([
+            loadCompletedQuizzes(),
+            loadCompletedQuests()
+          ]);
 
           // Check if we need to reset daily quests
           const lastResetDate = localStorage.getItem(`${user.id}_lastQuestReset`);
           const today = new Date().toDateString();
           
           if (lastResetDate !== today) {
-            resetDailyQuests();
+            await resetDailyQuests();
             localStorage.setItem(`${user.id}_lastQuestReset`, today);
           }
         } catch (error) {
@@ -82,6 +139,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } finally {
           setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
     };
 
@@ -141,104 +200,115 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const completeQuiz = (quizId: string, score: number, earnedXp: number) => {
-    if (!isAuthenticated) return;
+  const completeQuiz = async (quizId: string, score: number, earnedXp: number) => {
+    if (!isAuthenticated || !user) return;
     
-    const updatedCompletedQuizzes = [...completedQuizzes, quizId];
-    setCompletedQuizzes(updatedCompletedQuizzes);
-    localStorage.setItem(`${user?.id}_completedQuizzes`, JSON.stringify(updatedCompletedQuizzes));
-    
-    // Update quest completion based on quiz category and performance
-    const [category] = quizId.split('-');
-    const updatedQuests = quizDailyQuests.map(quest => {
-      // Complete category-specific quests
-      if (quest.title.includes('Daily Tasks') && category === 'dailyTasks' && !quest.completed) {
-        return { ...quest, completed: true };
-      }
-      if (quest.title.includes('Family') && category === 'familyRecognition' && !quest.completed) {
-        return { ...quest, completed: true };
-      }
-      if (quest.title.includes('Problem Solver') && category === 'simpleTasks' && !quest.completed) {
-        return { ...quest, completed: true };
-      }
-      if (quest.title.includes('Memory Champion') && category === 'memoryExercises' && !quest.completed) {
-        return { ...quest, completed: true };
-      }
-      if (quest.title.includes('Time Master') && category === 'timeOrientation' && !quest.completed) {
-        return { ...quest, completed: true };
+    try {
+      // Save quiz completion to database
+      const { error: insertError } = await supabase
+        .from('user_quiz_completions')
+        .insert({
+          user_id: user.id,
+          quiz_id: quizId,
+          score,
+          earned_xp: earnedXp
+        });
+
+      if (insertError) throw insertError;
+
+      // Update local state
+      const updatedCompletedQuizzes = [...completedQuizzes, quizId];
+      setCompletedQuizzes(updatedCompletedQuizzes);
+
+      // Update user progress
+      const newXp = user.xp + earnedXp;
+      let newLevel = user.level;
+      let newXpToNextLevel = user.xpToNextLevel;
+
+      if (newXp >= user.xpToNextLevel) {
+        newLevel += 1;
+        const remainingXp = newXp - user.xpToNextLevel;
+        newXpToNextLevel = Math.floor(user.xpToNextLevel * 1.5);
+        await updateUserProgress(remainingXp, newLevel, newXpToNextLevel);
+      } else {
+        await updateUserProgress(newXp, newLevel, newXpToNextLevel);
       }
       
-      // Complete perfect score quest
-      if (quest.title === 'Perfect Score' && score === 100 && !quest.completed) {
-        return { ...quest, completed: true };
+      // Update quest completion based on quiz category and performance
+      const [category] = quizId.split('-');
+      const questsToComplete: string[] = [];
+      
+      // Check category-specific quests
+      const categoryQuestMap: Record<string, string> = {
+        'dailyTasks': 'quest1',
+        'familyRecognition': 'quest2',
+        'simpleTasks': 'quest3',
+        'memoryExercises': 'quest4',
+        'timeOrientation': 'quest5'
+      };
+      
+      const categoryQuest = categoryQuestMap[category];
+      if (categoryQuest && !completedQuests.includes(categoryQuest)) {
+        questsToComplete.push(categoryQuest);
       }
       
-      return quest;
-    });
+      // Check perfect score quest
+      if (score === 100 && !completedQuests.includes('quest6')) {
+        questsToComplete.push('quest6');
+      }
+      
+      // Complete quests
+      for (const questId of questsToComplete) {
+        await completeQuest(questId);
+      }
+
+      // Check for quiz streak quest
+      if (updatedCompletedQuizzes.length >= 3 && !completedQuests.includes('quest7')) {
+        await completeQuest('quest7');
+      }
+    } catch (error) {
+      console.error('Error completing quiz:', error);
+    }
+  };
+
+  const completeQuest = async (questId: string) => {
+    if (!isAuthenticated || !user) return;
     
-    setQuizDailyQuests(updatedQuests);
-    
-    // Update completed quests in storage
-    const newlyCompletedQuests = updatedQuests
-      .filter(q => q.completed && !completedQuests.includes(q.id))
-      .map(q => q.id);
-    
-    if (newlyCompletedQuests.length > 0) {
-      const updatedCompletedQuests = [...completedQuests, ...newlyCompletedQuests];
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Save quest completion to database
+      const { error } = await supabase
+        .from('user_quest_completions')
+        .insert({
+          user_id: user.id,
+          quest_id: questId,
+          reset_date: today
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      const updatedCompletedQuests = [...completedQuests, questId];
       setCompletedQuests(updatedCompletedQuests);
-      localStorage.setItem(`${user?.id}_completedQuests`, JSON.stringify(updatedCompletedQuests));
+      
+      // Update quest display
+      const updatedQuests = quizDailyQuests.map(quest => 
+        quest.id === questId ? { ...quest, completed: true } : quest
+      );
+      setQuizDailyQuests(updatedQuests);
+    } catch (error) {
+      console.error('Error completing quest:', error);
     }
-
-    // Check for quiz streak quest
-    const todayQuizzes = updatedCompletedQuizzes.filter(qId => {
-      // In a real app, you'd check the completion date
-      // For now, we'll assume all completed quizzes today
-      return true;
-    });
-
-    if (todayQuizzes.length >= 3) {
-      const streakQuest = updatedQuests.find(q => q.title === 'Quiz Streak');
-      if (streakQuest && !streakQuest.completed) {
-        const finalUpdatedQuests = updatedQuests.map(q => 
-          q.id === streakQuest.id ? { ...q, completed: true } : q
-        );
-        setQuizDailyQuests(finalUpdatedQuests);
-        
-        const finalCompletedQuests = [...completedQuests, ...newlyCompletedQuests, streakQuest.id];
-        setCompletedQuests(finalCompletedQuests);
-        localStorage.setItem(`${user?.id}_completedQuests`, JSON.stringify(finalCompletedQuests));
-      }
-    }
-  };
-
-  const completeQuest = (questId: string) => {
-    if (!isAuthenticated) return;
-    
-    const updatedQuests = quizDailyQuests.map(quest => 
-      quest.id === questId ? { ...quest, completed: true } : quest
-    );
-    
-    setQuizDailyQuests(updatedQuests);
-    
-    const updatedCompletedQuests = [...completedQuests, questId];
-    setCompletedQuests(updatedCompletedQuests);
-    localStorage.setItem(`${user?.id}_completedQuests`, JSON.stringify(updatedCompletedQuests));
-  };
-
-  const resetDailyQuests = () => {
-    if (!isAuthenticated) return;
-    
-    const resetQuests = quizDailyQuests.map(quest => ({ ...quest, completed: false }));
-    setQuizDailyQuests(resetQuests);
-    
-    setCompletedQuests([]);
-    localStorage.removeItem(`${user?.id}_completedQuests`);
   };
 
   return (
     <QuizContext.Provider value={{
       categories: quizCategories,
-      dailyQuests: quizDailyQuests,
+      dailyQuests: quizDailyQuests.map(quest => ({
+        ...quest,
+        completed: completedQuests.includes(quest.id)
+      })),
       selectedCategory,
       selectedQuiz,
       completedQuizzes,

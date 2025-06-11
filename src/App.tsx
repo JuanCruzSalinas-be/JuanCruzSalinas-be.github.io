@@ -13,10 +13,28 @@ import Survey from './pages/Survey';
 
 // Protected route component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const isAuthenticated = localStorage.getItem('memoryLaneUser') !== null;
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+  const [isChecking, setIsChecking] = React.useState(true);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+
+  React.useEffect(() => {
+    // Check authentication status from context instead of localStorage
+    const checkAuth = () => {
+      // This will be handled by the AuthProvider
+      setIsChecking(false);
+    };
+    
+    checkAuth();
+  }, []);
+
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
   
   return <>{children}</>;

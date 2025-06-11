@@ -1,61 +1,45 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { User } from '../types';
+import React, { createContext, useContext } from 'react';
 import { useAuth } from './AuthContext';
 
 interface UserContextType {
-  gainXP: (amount: number) => void;
-  levelUp: () => void;
+  gainXP: (amount: number) => Promise<void>;
+  levelUp: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType>({
-  gainXP: () => {},
-  levelUp: () => {}
+  gainXP: async () => {},
+  levelUp: async () => {}
 });
 
 export const useUser = () => useContext(UserContext);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, updateUserProgress } = useAuth();
   
-  const gainXP = (amount: number) => {
-    if (!isAuthenticated || !user) return;
+  const gainXP = async (amount: number) => {
+    if (!user) return;
     
-    // Update user with new XP
-    const updatedUser = { 
-      ...user, 
-      xp: user.xp + amount
-    };
+    const newXp = user.xp + amount;
+    let newLevel = user.level;
+    let newXpToNextLevel = user.xpToNextLevel;
     
     // Check if user should level up
-    if (updatedUser.xp >= updatedUser.xpToNextLevel) {
-      updatedUser.level += 1;
-      updatedUser.xp = updatedUser.xp - updatedUser.xpToNextLevel;
-      updatedUser.xpToNextLevel = Math.floor(updatedUser.xpToNextLevel * 1.5); // Increase XP needed for next level
+    if (newXp >= user.xpToNextLevel) {
+      newLevel += 1;
+      const remainingXp = newXp - user.xpToNextLevel;
+      newXpToNextLevel = Math.floor(user.xpToNextLevel * 1.5);
+      await updateUserProgress(remainingXp, newLevel, newXpToNextLevel);
+    } else {
+      await updateUserProgress(newXp, newLevel, newXpToNextLevel);
     }
-    
-    // Update localStorage
-    localStorage.setItem('memoryLaneUser', JSON.stringify(updatedUser));
-    
-    // Force a refresh by reloading the page (in a real app, we'd use state management)
-    window.location.reload();
   };
   
-  const levelUp = () => {
-    if (!isAuthenticated || !user) return;
+  const levelUp = async () => {
+    if (!user) return;
     
-    // Level up user
-    const updatedUser = {
-      ...user,
-      level: user.level + 1,
-      xp: 0,
-      xpToNextLevel: Math.floor(user.xpToNextLevel * 1.5) // Increase XP needed for next level
-    };
-    
-    // Update localStorage
-    localStorage.setItem('memoryLaneUser', JSON.stringify(updatedUser));
-    
-    // Force a refresh by reloading the page
-    window.location.reload();
+    const newLevel = user.level + 1;
+    const newXpToNextLevel = Math.floor(user.xpToNextLevel * 1.5);
+    await updateUserProgress(0, newLevel, newXpToNextLevel);
   };
 
   return (
