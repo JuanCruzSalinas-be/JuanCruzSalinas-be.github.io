@@ -2,16 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuiz } from '../context/QuizContext';
 import { useUser } from '../context/UserContext';
+import { useAuth } from '../context/AuthContext';
 import Header from '../components/layout/Header';
 import Card, { CardContent, CardHeader, CardFooter } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { ChevronLeft, ChevronRight, Check, X, Award, Loader } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, X, Award, Loader, Sparkles, Info } from 'lucide-react';
 import useSound from 'use-sound';
 
 const QuizPage: React.FC = () => {
   const { quizId } = useParams<{ quizId: string }>();
   const { categories, selectedQuiz, setSelectedQuiz, completeQuiz, loadQuizQuestions, quizLoading } = useQuiz();
   const { gainXP } = useUser();
+  const { user } = useAuth();
   const navigate = useNavigate();
   
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -21,6 +23,7 @@ const QuizPage: React.FC = () => {
   const [score, setScore] = useState(0);
   const [earnedXp, setEarnedXp] = useState(0);
   const [showResults, setShowResults] = useState(false);
+  const [questionsGenerated, setQuestionsGenerated] = useState(false);
 
   // Sound effects
   const [playCorrect] = useSound('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3', { volume: 0.5 });
@@ -34,12 +37,17 @@ const QuizPage: React.FC = () => {
           const quiz = category.quizzes.find(q => q.id === quizId);
           if (quiz) {
             setSelectedQuiz(quiz);
-            if (quiz.questions.length === 0) {
-              await loadQuizQuestions(quizId);
-            }
+            console.log('Loading quiz questions for:', quizId);
+            await loadQuizQuestions(quizId);
+            setQuestionsGenerated(true);
             break;
           }
         }
+      } else if (selectedQuiz && quizId === selectedQuiz.id) {
+        // Refresh questions for the current quiz
+        console.log('Refreshing questions for current quiz:', quizId);
+        await loadQuizQuestions(quizId);
+        setQuestionsGenerated(true);
       }
     };
     
@@ -55,7 +63,13 @@ const QuizPage: React.FC = () => {
           <Card className="max-w-2xl mx-auto">
             <CardContent className="py-12 flex flex-col items-center justify-center">
               <Loader className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-              <p className="text-xl text-gray-600">Loading quiz questions...</p>
+              <p className="text-xl text-gray-600 mb-2">Generating personalized questions...</p>
+              {user?.personalInfo && (
+                <div className="flex items-center text-sm text-blue-600">
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  <span>Using your survey responses for personalization</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </main>
@@ -72,9 +86,20 @@ const QuizPage: React.FC = () => {
           <Card className="max-w-2xl mx-auto">
             <CardContent className="py-12 text-center">
               <h1 className="text-2xl font-bold text-gray-900 mb-4">Quiz Not Found</h1>
-              <Button onClick={() => navigate('/categories')}>
-                Back to Categories
-              </Button>
+              <p className="text-gray-600 mb-6">
+                Unable to load quiz questions. This might be due to a connection issue.
+              </p>
+              <div className="space-y-3">
+                <Button onClick={() => navigate('/categories')}>
+                  Back to Categories
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.location.reload()}
+                >
+                  Try Again
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </main>
@@ -129,6 +154,12 @@ const QuizPage: React.FC = () => {
           <Card className="max-w-2xl mx-auto">
             <CardHeader className="text-center border-b">
               <h1 className="text-2xl font-bold text-gray-900">Quiz Complete!</h1>
+              {questionsGenerated && user?.personalInfo && (
+                <div className="flex items-center justify-center text-sm text-blue-600 mt-2">
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  <span>Personalized questions based on your survey</span>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="py-8">
               <div className="flex flex-col items-center justify-center">
@@ -159,6 +190,8 @@ const QuizPage: React.FC = () => {
                       setScore(0);
                       setEarnedXp(0);
                       setShowResults(false);
+                      // Generate new questions
+                      loadQuizQuestions(selectedQuiz.id);
                     }}
                   >
                     Try Again
@@ -179,7 +212,15 @@ const QuizPage: React.FC = () => {
       <main className="container mx-auto px-4 py-8">
         <Card className="max-w-3xl mx-auto">
           <CardHeader className="flex justify-between items-center border-b">
-            <h1 className="text-xl font-semibold">{selectedQuiz.title}</h1>
+            <div>
+              <h1 className="text-xl font-semibold">{selectedQuiz.title}</h1>
+              {questionsGenerated && user?.personalInfo && (
+                <div className="flex items-center text-sm text-blue-600 mt-1">
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  <span>Personalized for you</span>
+                </div>
+              )}
+            </div>
             <div className="flex items-center">
               <span className="text-sm text-gray-600 mr-2">
                 Question {currentQuestionIndex + 1} of {questions.length}
