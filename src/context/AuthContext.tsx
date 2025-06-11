@@ -32,30 +32,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   // Convert Supabase user profile to app user format
-  const convertToAppUser = (profile: UserProfile): User => ({
-    id: profile.id,
-    name: profile.name,
-    level: profile.level,
-    xp: profile.xp,
-    xpToNextLevel: profile.xp_to_next_level,
-    personalInfo: profile.personal_info || undefined
-  });
+  const convertToAppUser = (profile: UserProfile): User => {
+    // Ensure personalInfo arrays are properly initialized
+    const personalInfo = profile.personal_info || {};
+    const safePersonalInfo = {
+      ...personalInfo,
+      interests: personalInfo.interests || [],
+      familyMembers: personalInfo.familyMembers || [],
+      dailyRoutine: personalInfo.dailyRoutine || [],
+      importantDates: personalInfo.importantDates || [],
+      favoriteLocations: personalInfo.favoriteLocations || []
+    };
+
+    return {
+      id: profile.id,
+      name: profile.name,
+      level: profile.level,
+      xp: profile.xp,
+      xpToNextLevel: profile.xp_to_next_level,
+      personalInfo: safePersonalInfo
+    };
+  };
 
   // Load user profile from database
   const loadUserProfile = async (userId: string) => {
     try {
-      const { data: profile, error } = await supabase
+      const { data: profiles, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .limit(1);
 
       if (error) {
         console.error('Error loading user profile:', error);
         return null;
       }
 
-      return profile ? convertToAppUser(profile) : null;
+      // Check if any profiles were returned
+      if (!profiles || profiles.length === 0) {
+        console.log('No user profile found for user:', userId);
+        return null;
+      }
+
+      return convertToAppUser(profiles[0]);
     } catch (error) {
       console.error('Error loading user profile:', error);
       return null;
@@ -73,7 +92,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           level: 0,
           xp: 0,
           xp_to_next_level: 100,
-          personal_info: {}
+          personal_info: {
+            interests: [],
+            familyMembers: [],
+            dailyRoutine: [],
+            importantDates: [],
+            favoriteLocations: []
+          }
         })
         .select()
         .single();
