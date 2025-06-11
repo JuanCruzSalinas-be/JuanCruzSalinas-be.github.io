@@ -170,9 +170,9 @@ export const generatePersonalizedQuestions = async (
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-    // Create AbortController for timeout
+    // Create AbortController for timeout - increased to 30 seconds
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
     const response = await fetch(`${supabaseUrl}/functions/v1/generate-questions`, {
       method: 'POST',
