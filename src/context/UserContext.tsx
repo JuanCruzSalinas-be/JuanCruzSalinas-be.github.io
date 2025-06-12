@@ -85,8 +85,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const createProfile = async (retryCount = 0) => {
     if (!user || !supabase) return;
 
-    const maxRetries = 3;
-    const retryDelay = 1000; // 1 second
+    const maxRetries = 5;
+    const retryDelay = 2000; // 2 seconds
 
     try {
       const newProfile = {
