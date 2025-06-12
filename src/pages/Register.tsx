@@ -15,7 +15,7 @@ const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { signUp } = useAuth();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +33,28 @@ const Register: React.FC = () => {
     try {
       setError('');
       setLoading(true);
-      await register(name, email, password);
-      navigate('/survey'); // Redirect to survey after registration
+      const { error: signUpError } = await signUp(name, email, password);
+      
+      if (signUpError) {
+        console.error('Registration error:', signUpError);
+        
+        // Handle different types of registration errors
+        if (signUpError.message?.includes('User already registered')) {
+          setError('An account with this email already exists. Please try signing in instead.');
+        } else if (signUpError.message?.includes('Password should be at least')) {
+          setError('Password should be at least 6 characters long.');
+        } else if (signUpError.message?.includes('Invalid email')) {
+          setError('Please enter a valid email address.');
+        } else if (signUpError.message?.includes('Network')) {
+          setError('Network error. Please check your internet connection and try again.');
+        } else {
+          setError('Failed to create an account. Please try again or contact support if the problem persists.');
+        }
+        return;
+      }
+      
+      // Only navigate if registration was successful
+      navigate('/survey');
     } catch (err) {
       setError('Failed to create an account');
       console.error(err);
@@ -111,7 +131,7 @@ const Register: React.FC = () => {
           <div className="text-center mt-6">
             <p className="text-gray-600">
               Already have an account?{' '}
-              <Link to="/login" className="text-blue-600 hover: underline">
+              <Link to="/login" className="text-blue-600 hover:underline">
                 Sign in
               </Link>
             </p>

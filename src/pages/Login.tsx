@@ -13,7 +13,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { signIn } = useAuth();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +26,7 @@ const Login: React.FC = () => {
     try {
       setError('');
       setLoading(true);
-      await login(email, password);
+      await signIn(email, password);
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Login error:', err);

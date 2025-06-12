@@ -85,13 +85,13 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const createProfile = async (retryCount = 0) => {
     if (!user || !supabase) return;
 
-    const maxRetries = 10;
-    const baseRetryDelay = 3000; // 3 seconds base delay
+    const maxRetries = 20; // Increased from 10 to 20 for more robust handling
+    const baseRetryDelay = 2000; // Reduced base delay to 2 seconds
 
     try {
       // Add an initial delay on first attempt to give Supabase time to sync
       if (retryCount === 0) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Increased initial delay
       }
 
       const newProfile = {
@@ -112,10 +112,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) {
         // Check if it's a foreign key constraint violation (user not yet available)
         if (error.code === '23503' && retryCount < maxRetries) {
-          console.log(`Profile creation failed due to foreign key constraint. Retrying in ${baseRetryDelay * (retryCount + 1)}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+          const retryDelay = Math.min(baseRetryDelay * Math.pow(1.5, retryCount), 30000); // Cap at 30 seconds
+          console.log(`Profile creation failed due to foreign key constraint. Retrying in ${retryDelay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
           
           // Wait before retrying with exponential backoff
-          await new Promise(resolve => setTimeout(resolve, baseRetryDelay * (retryCount + 1)));
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
           
           // Retry with exponential backoff
           return await createProfile(retryCount + 1);
@@ -124,6 +125,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error creating profile:', error);
         throw error;
       } else {
+        console.log('Profile created successfully after', retryCount, 'retries');
         setProfile(data);
       }
     } catch (error) {
@@ -131,6 +133,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // If we've exhausted retries, still try to set loading to false
       if (retryCount >= maxRetries) {
+        console.error('Max retries exceeded for profile creation');
         setLoading(false);
       }
     }
