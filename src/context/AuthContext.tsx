@@ -1,262 +1,129 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { User, PersonalInfo } from '../types';
-import { supabase, UserProfile } from '../lib/supabase';
-import { AuthError, User as SupabaseUser } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase, isSupabaseAvailable } from '../lib/supabase';
+import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  session: Session | null;
   loading: boolean;
-  updatePersonalInfo: (info: PersonalInfo) => Promise<void>;
-  updateUserProgress: (xp: number, level: number, xpToNextLevel: number) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  isSupabaseConnected: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isAuthenticated: false,
-  login: async () => {},
-  register: async () => {},
-  logout: () => {},
-  loading: true,
-  updatePersonalInfo: async () => {},
-  updateUserProgress: async () => {}
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const isSupabaseConnected = isSupabaseAvailable();
 
-  // Convert Supabase user profile to app user format
-  const convertToAppUser = (profile: UserProfile): User => {
-    // Ensure personalInfo arrays are properly initialized
-    const personalInfo = profile.personal_info || {};
-    const safePersonalInfo = {
-      ...personalInfo,
-      interests: personalInfo.interests || [],
-      familyMembers: personalInfo.familyMembers || [],
-      dailyRoutine: personalInfo.dailyRoutine || [],
-      importantDates: personalInfo.importantDates || [],
-      favoriteLocations: personalInfo.favoriteLocations || []
-    };
-
-    return {
-      id: profile.id,
-      name: profile.name,
-      level: profile.level,
-      xp: profile.xp,
-      xpToNextLevel: profile.xp_to_next_level,
-      personalInfo: safePersonalInfo
-    };
-  };
-
-  // Load user profile from database
-  const loadUserProfile = async (userId: string) => {
-    try {
-      const { data: profiles, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId);
-
-      if (error) {
-        console.error('Error loading user profile:', error);
-        return null;
-      }
-
-      // Check if any profiles were returned
-      if (!profiles || profiles.length === 0) {
-        console.log('No user profile found for user:', userId);
-        return null;
-      }
-
-      return convertToAppUser(profiles[0]);
-    } catch (error) {
-      console.error('Error loading user profile:', error);
-      return null;
-    }
-  };
-
-  // Create user profile in database
-  const createUserProfile = async (userId: string, name: string): Promise<User | null> => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: userId,
-          name,
-          level: 0,
-          xp: 0,
-          xp_to_next_level: 100,
-          personal_info: {
-            interests: [],
-            familyMembers: [],
-            dailyRoutine: [],
-            importantDates: [],
-            favoriteLocations: []
-          }
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating user profile:', error);
-        return null;
-      }
-
-      return profile ? convertToAppUser(profile) : null;
-    } catch (error) {
-      console.error('Error creating user profile:', error);
-      return null;
-    }
-  };
-
-  // Check authentication state on mount
   useEffect(() => {
-    const initializeAuth = async () => {
+    // If Supabase is not available, set loading to false and return
+    if (!isSupabaseConnected || !supabase) {
+      setLoading(false);
+      return;
+    }
+
+    // Get initial session
+    const getInitialSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          const profile = await loadUserProfile(session.user.id);
-          setUser(profile);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('Error in getInitialSession:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    initializeAuth();
+    getInitialSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const profile = await loadUserProfile(session.user.id);
-        setUser(profile);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isSupabaseConnected]);
 
-  const login = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        const profile = await loadUserProfile(data.user.id);
-        setUser(profile);
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+  const signUp = async (email: string, password: string, name: string) => {
+    if (!isSupabaseConnected || !supabase) {
+      return { error: { message: 'Supabase is not connected. Please configure your Supabase credentials.' } };
     }
-  };
 
-  const register = async (name: string, email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
-        password
+        password,
+        options: {
+          data: {
+            name,
+          },
+        },
       });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Create user profile
-        const profile = await createUserProfile(data.user.id, name);
-        setUser(profile);
-      }
+      return { error };
     } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
+      return { error };
     }
   };
 
-  const updatePersonalInfo = async (info: PersonalInfo) => {
-    if (!user) return;
+  const signIn = async (email: string, password: string) => {
+    if (!isSupabaseConnected || !supabase) {
+      return { error: { message: 'Supabase is not connected. Please configure your Supabase credentials.' } };
+    }
 
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ personal_info: info })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      // Update local user state
-      setUser({
-        ...user,
-        personalInfo: info
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
+      return { error };
     } catch (error) {
-      console.error('Error updating personal info:', error);
-      throw error;
+      return { error };
     }
   };
 
-  const updateUserProgress = async (xp: number, level: number, xpToNextLevel: number) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ 
-          xp,
-          level,
-          xp_to_next_level: xpToNextLevel
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
-
-      // Update local user state
-      setUser({
-        ...user,
-        xp,
-        level,
-        xpToNextLevel
-      });
-    } catch (error) {
-      console.error('Error updating user progress:', error);
-      throw error;
+  const signOut = async () => {
+    if (!isSupabaseConnected || !supabase) {
+      return;
     }
-  };
 
-  const logout = async () => {
     try {
       await supabase.auth.signOut();
-      setUser(null);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Error signing out:', error);
     }
   };
 
-  return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isAuthenticated: !!user, 
-      login, 
-      register, 
-      logout,
-      loading,
-      updatePersonalInfo,
-      updateUserProgress
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    session,
+    loading,
+    signUp,
+    signIn,
+    signOut,
+    isSupabaseConnected,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

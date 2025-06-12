@@ -1,5 +1,6 @@
 import { Category, DailyQuest, Question, PersonalInfo } from '../types';
 import { Clock, Home, Brain, Users, BookOpen, Calendar } from 'lucide-react';
+import { isSupabaseAvailable } from '../lib/supabase';
 
 // Helper function to shuffle array
 const shuffleArray = <T>(array: T[]): T[] => {
@@ -139,21 +140,6 @@ const generateDefaultQuestions = (category: string, difficulty: 'easy' | 'medium
   }));
 };
 
-// Helper function to check if Supabase is properly configured
-const isSupabaseConfigured = (): boolean => {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  
-  return !!(
-    supabaseUrl && 
-    supabaseKey && 
-    supabaseUrl !== 'https://your-project.supabase.co' && 
-    supabaseKey !== 'your-anon-key' &&
-    supabaseUrl.includes('supabase.co') &&
-    supabaseKey.length > 20
-  );
-};
-
 // Enhanced AI question generation with better personalization
 export const generatePersonalizedQuestions = async (
   category: string,
@@ -161,7 +147,7 @@ export const generatePersonalizedQuestions = async (
   personalInfo?: PersonalInfo
 ): Promise<Question[]> => {
   // First check if Supabase is properly configured
-  if (!isSupabaseConfigured()) {
+  if (!isSupabaseAvailable()) {
     console.log('Supabase not properly configured, using default questions');
     return generateDefaultQuestions(category, difficulty);
   }

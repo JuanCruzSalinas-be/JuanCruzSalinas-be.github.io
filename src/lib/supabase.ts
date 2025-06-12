@@ -3,7 +3,29 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Check if we have valid Supabase credentials
+const hasValidCredentials = () => {
+  return !!(
+    supabaseUrl && 
+    supabaseAnonKey && 
+    supabaseUrl !== 'https://placeholder.supabase.co' && 
+    supabaseUrl !== 'https://your-project.supabase.co' &&
+    supabaseAnonKey !== 'placeholder-key' &&
+    supabaseAnonKey !== 'your-anon-key' &&
+    supabaseUrl.includes('supabase.co') &&
+    supabaseAnonKey.length > 20
+  );
+};
+
+// Only create the client if we have valid credentials
+export const supabase = hasValidCredentials() 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
+
+// Helper function to check if Supabase is available
+export const isSupabaseAvailable = (): boolean => {
+  return supabase !== null;
+};
 
 // Database types
 export interface UserProfile {

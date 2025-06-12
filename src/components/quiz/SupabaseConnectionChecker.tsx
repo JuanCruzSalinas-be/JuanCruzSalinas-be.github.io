@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Card, { CardContent, CardHeader } from '../ui/Card';
 import Button from '../ui/Button';
 import { CheckCircle, XCircle, AlertTriangle, ExternalLink, Database } from 'lucide-react';
+import { isSupabaseAvailable } from '../../lib/supabase';
 
 const SupabaseConnectionChecker: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | 'error'>('checking');
@@ -16,14 +17,7 @@ const SupabaseConnectionChecker: React.FC = () => {
     const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     
     // Check if environment variables are present and valid
-    const hasValidEnvVars = !!(
-      supabaseUrl && 
-      supabaseKey && 
-      supabaseUrl !== 'https://your-project.supabase.co' && 
-      supabaseKey !== 'your-anon-key' &&
-      supabaseUrl.includes('supabase.co') &&
-      supabaseKey.length > 20
-    );
+    const hasValidEnvVars = isSupabaseAvailable();
     
     setEnvVarsPresent(hasValidEnvVars);
     

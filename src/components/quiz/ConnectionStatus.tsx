@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Card, { CardContent } from '../ui/Card';
 import Button from '../ui/Button';
 import { CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { isSupabaseAvailable } from '../../lib/supabase';
 
 const ConnectionStatus: React.FC = () => {
   const [status, setStatus] = useState<'checking' | 'connected' | 'disconnected' | 'error'>('checking');
@@ -16,24 +17,11 @@ const ConnectionStatus: React.FC = () => {
     console.log('Checking Supabase connection...');
     console.log('URL exists:', !!supabaseUrl);
     console.log('Key exists:', !!supabaseKey);
-    console.log('URL value:', supabaseUrl);
-    console.log('Key length:', supabaseKey?.length);
+    console.log('Supabase available:', isSupabaseAvailable());
     
-    if (!supabaseUrl || !supabaseKey) {
+    if (!isSupabaseAvailable()) {
       setStatus('disconnected');
-      setDetails('Environment variables missing');
-      return;
-    }
-    
-    if (supabaseUrl === 'https://your-project.supabase.co' || supabaseKey === 'your-anon-key') {
-      setStatus('disconnected');
-      setDetails('Default placeholder values detected');
-      return;
-    }
-    
-    if (!supabaseUrl.includes('supabase.co') || supabaseKey.length < 20) {
-      setStatus('disconnected');
-      setDetails('Invalid Supabase credentials format');
+      setDetails('Supabase credentials not properly configured');
       return;
     }
     
