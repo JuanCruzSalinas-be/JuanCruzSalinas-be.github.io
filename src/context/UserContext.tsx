@@ -82,8 +82,11 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const createProfile = async () => {
+  const createProfile = async (retryCount = 0) => {
     if (!user || !supabase) return;
+
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second
 
     try {
       const newProfile = {
@@ -102,12 +105,29 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error) {
+        // Check if it's a foreign key constraint violation (user not yet available)
+        if (error.code === '23503' && retryCount < maxRetries) {
+          console.log(`Profile creation failed due to foreign key constraint. Retrying in ${retryDelay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          
+          // Retry with exponential backoff
+          return await createProfile(retryCount + 1);
+        }
+        
         console.error('Error creating profile:', error);
+        throw error;
       } else {
         setProfile(data);
       }
     } catch (error) {
       console.error('Error in createProfile:', error);
+      
+      // If we've exhausted retries, still try to set loading to false
+      if (retryCount >= maxRetries) {
+        setLoading(false);
+      }
     }
   };
 

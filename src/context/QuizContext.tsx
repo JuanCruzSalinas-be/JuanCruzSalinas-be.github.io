@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { DailyQuest, Quiz, Category, PersonalInfo } from '../types';
 import { categories as initialCategories, dailyQuests, generatePersonalizedQuestions } from '../data/quizzes';
 import { useAuth } from './AuthContext';
+import { useUser } from './UserContext';
 import { supabase } from '../lib/supabase';
 
 interface QuizContextType {
@@ -50,7 +51,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [quizLoading, setQuizLoading] = useState(false);
   
-  const { user, isAuthenticated, updateUserProgress } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { profile, addXP } = useUser();
 
   // Load user's completed quizzes from database
   const loadCompletedQuizzes = async () => {
@@ -173,12 +175,12 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Always generate fresh questions for each quiz attempt
       const [category, difficulty] = quizId.split('-');
-      console.log(`Generating personalized questions for ${category} (${difficulty}) with user info:`, user?.personalInfo);
+      console.log(`Generating personalized questions for ${category} (${difficulty}) with user info:`, profile?.personal_info);
       
       const questions = await generatePersonalizedQuestions(
         category,
         difficulty as 'easy' | 'medium' | 'hard',
-        user?.personalInfo
+        profile?.personal_info
       );
       
       // Update the quiz with new questions
@@ -220,19 +222,8 @@ export const QuizProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedCompletedQuizzes = [...completedQuizzes, quizId];
       setCompletedQuizzes(updatedCompletedQuizzes);
 
-      // Update user progress
-      const newXp = user.xp + earnedXp;
-      let newLevel = user.level;
-      let newXpToNextLevel = user.xpToNextLevel;
-
-      if (newXp >= user.xpToNextLevel) {
-        newLevel += 1;
-        const remainingXp = newXp - user.xpToNextLevel;
-        newXpToNextLevel = Math.floor(user.xpToNextLevel * 1.5);
-        await updateUserProgress(remainingXp, newLevel, newXpToNextLevel);
-      } else {
-        await updateUserProgress(newXp, newLevel, newXpToNextLevel);
-      }
+      // Update user progress using UserContext
+      await addXP(earnedXp);
       
       // Update quest completion based on quiz category and performance
       const [category] = quizId.split('-');

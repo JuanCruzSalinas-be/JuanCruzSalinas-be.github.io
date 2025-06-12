@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useUser } from '../context/UserContext';
 import { useQuiz } from '../context/QuizContext';
 import Header from '../components/layout/Header';
 import LevelProgress from '../components/quiz/LevelProgress';
@@ -12,12 +13,27 @@ import Button from '../components/ui/Button';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const { profile, loading: profileLoading } = useUser();
   const { dailyQuests, completedQuests, categories } = useQuiz();
   const navigate = useNavigate();
   
   if (!user) {
     navigate('/login');
     return null;
+  }
+
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading your profile...</p>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   // Show featured categories (first 3)
@@ -30,13 +46,13 @@ const Dashboard: React.FC = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Welcome to MemoryLane, {user.name}!
+            Welcome to MemoryLane, {profile?.name || 'User'}!
           </h1>
           <p className="text-gray-600 mt-2">
             Your personalized memory training journey awaits.
           </p>
           
-          {!user.personalInfo && (
+          {!profile?.personal_info && (
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-center mb-2">
                 <Sparkles className="h-5 w-5 text-blue-600 mr-2" />
@@ -55,7 +71,7 @@ const Dashboard: React.FC = () => {
             </div>
           )}
           
-          {user.personalInfo && (
+          {profile?.personal_info && (
             <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center justify-center">
                 <Sparkles className="h-5 w-5 text-green-600 mr-2" />

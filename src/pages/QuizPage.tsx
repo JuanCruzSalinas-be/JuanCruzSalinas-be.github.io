@@ -12,7 +12,7 @@ import useSound from 'use-sound';
 const QuizPage: React.FC = () => {
   const { quizId } = useParams<{ quizId: string }>();
   const { categories, selectedQuiz, setSelectedQuiz, completeQuiz, loadQuizQuestions, quizLoading } = useQuiz();
-  const { gainXP } = useUser();
+  const { addXP, profile } = useUser();
   const { user } = useAuth();
   const navigate = useNavigate();
   
@@ -64,7 +64,7 @@ const QuizPage: React.FC = () => {
             <CardContent className="py-12 flex flex-col items-center justify-center">
               <Loader className="w-12 h-12 text-blue-600 animate-spin mb-4" />
               <p className="text-xl text-gray-600 mb-2">Generating personalized questions...</p>
-              {user?.personalInfo && (
+              {profile?.personal_info && (
                 <div className="flex items-center text-sm text-blue-600">
                   <Sparkles className="w-4 h-4 mr-1" />
                   <span>Using your survey responses for personalization</span>
@@ -141,7 +141,7 @@ const QuizPage: React.FC = () => {
   const handleFinishQuiz = () => {
     const finalScore = Math.round((score / questions.length) * 100);
     completeQuiz(selectedQuiz.id, finalScore, earnedXp);
-    gainXP(earnedXp);
+    addXP(earnedXp);
     setSelectedQuiz(null);
     setTimeout(() => navigate('/dashboard'), 10);
   };
@@ -154,7 +154,7 @@ const QuizPage: React.FC = () => {
           <Card className="max-w-2xl mx-auto">
             <CardHeader className="text-center border-b">
               <h1 className="text-2xl font-bold text-gray-900">Quiz Complete!</h1>
-              {questionsGenerated && user?.personalInfo && (
+              {questionsGenerated && profile?.personal_info && (
                 <div className="flex items-center justify-center text-sm text-blue-600 mt-2">
                   <Sparkles className="w-4 h-4 mr-1" />
                   <span>Personalized questions based on your survey</span>
@@ -214,7 +214,7 @@ const QuizPage: React.FC = () => {
           <CardHeader className="flex justify-between items-center border-b">
             <div>
               <h1 className="text-xl font-semibold">{selectedQuiz.title}</h1>
-              {questionsGenerated && user?.personalInfo && (
+              {questionsGenerated && profile?.personal_info && (
                 <div className="flex items-center text-sm text-blue-600 mt-1">
                   <Sparkles className="w-4 h-4 mr-1" />
                   <span>Personalized for you</span>
